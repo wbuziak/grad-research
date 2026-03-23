@@ -34,8 +34,16 @@ int main(int argc, char** argv) {
         // Instructions
         if (prev == "board.processor.start.core.commitStats0.numInsts") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         if (prev == "board.processor.switch.core.commitStats0.numInsts") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.processor.switch3.core.commitStats0.numInsts") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.processor.switch2.core.commitStats0.numInsts") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.processor.switch1.core.commitStats0.numInsts") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.processor.switch0.core.commitStats0.numInsts") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         if (prev == "board.processor.switch.core.commitStats0.ipc") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+
         if (prev == "board.processor.switch0.core.ipc") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.processor.switch1.core.ipc") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.processor.switch2.core.ipc") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.processor.switch3.core.ipc") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
 
         // Accesses
         //l1
