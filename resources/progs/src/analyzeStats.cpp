@@ -68,6 +68,7 @@ int main(int argc, char** argv) {
         // l2
         if (prev == "board.cache_hierarchy.l2cache.oververboseAccesses::total") {  printf("%s,  %s\n", prev.c_str(), subs.c_str()); }
         if (prev == "board.cache_hierarchy.l2-cache-0.oververboseAccesses::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.cache_hierarchy.l2cache.overallAccesses::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
         // metadata cache
         if (prev == "board.memory.secure_memory.l3.oververboseAccesses::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         if (prev == "board.memory.secure_memory.metadata_requests") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
@@ -80,6 +81,7 @@ int main(int argc, char** argv) {
         // l2
         if (prev == "board.cache_hierarchy.l2-cache-0.oververboseHits::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
         if (prev == "board.cache_hierarchy.l2cache.oververboseHits::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
+        if (prev == "board.cache_hierarchy.l2cache.overallHits::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
         // metadata cache
         if (prev == "board.memory.secure_memory.l3.oververboseHits::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         if (prev == "board.memory.metadata_cache.oververboseHits::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
@@ -92,6 +94,7 @@ int main(int argc, char** argv) {
         // l2
         if (prev == "board.cache_hierarchy.l2cache.oververboseMisses::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
         if (prev == "board.cache_hierarchy.l2-cache-0.oververboseMissRate::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.cache_hierarchy.l2cache.overallMisses::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
         // metadata cache
         if (prev == "board.memory.secure_memory.l3.oververboseMissRate::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         if (prev == "board.memory.secure_memory.metadata_misses") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
