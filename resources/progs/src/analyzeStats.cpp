@@ -65,6 +65,8 @@ int main(int argc, char** argv) {
         //l1
         if (prev == "board.cache_hierarchy.l1i-cache-0.oververboseAccesses::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         if (prev == "board.cache_hierarchy.l1d-cache-0.oververboseAccesses::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.cache_hierarchy.l1dcaches1.overallAccesses::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.cache_hierarchy.l1icaches1.overallAccesses::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         // l2
         if (prev == "board.cache_hierarchy.l2cache.oververboseAccesses::total") {  printf("%s,  %s\n", prev.c_str(), subs.c_str()); }
         if (prev == "board.cache_hierarchy.l2-cache-0.oververboseAccesses::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
@@ -78,6 +80,8 @@ int main(int argc, char** argv) {
         //l1
         if (prev == "board.cache_hierarchy.l1d-cache-0.oververboseHits::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         if (prev == "board.cache_hierarchy.l1i-cache-0.oververboseHits::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.cache_hierarchy.l1dcaches1.overallHits::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.cache_hierarchy.l1icaches1.overallHits::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         // l2
         if (prev == "board.cache_hierarchy.l2-cache-0.oververboseHits::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
         if (prev == "board.cache_hierarchy.l2cache.oververboseHits::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
@@ -91,6 +95,8 @@ int main(int argc, char** argv) {
         //l1
         if (prev == "board.cache_hierarchy.l1d-cache-0.oververboseMissRate::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         if (prev == "board.cache_hierarchy.l1i-cache-0.oververboseMissRate::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.cache_hierarchy.l1dcaches1.overallMissRate::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
+        if (prev == "board.cache_hierarchy.l1icaches1.overallMissRate::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
         // l2
         if (prev == "board.cache_hierarchy.l2cache.oververboseMisses::total") {  printf("%s,    %s\n", prev.c_str(), subs.c_str()); }
         if (prev == "board.cache_hierarchy.l2-cache-0.oververboseMissRate::total") { printf("%s,  %s\n", prev.c_str(), subs.c_str());}
