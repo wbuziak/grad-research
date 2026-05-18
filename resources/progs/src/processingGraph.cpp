@@ -15,19 +15,22 @@ int main(int argc, char** argv)
   ifstream file;
   istringstream ss;
   vector <string> sv;
-  int i;
+//  size_t i;
+  int cycles, l2_misses, l2_accesses, l2_hits;
 
-  if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/stats.txt\n"); exit(1); }
+  if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/stats.csv\n"); exit(1); }
 
   // grab filename
   fname = argv[1];
 
-  printf("Processing %s\n", fname.c_str());
-
   // open file
   file.open(fname);
   if (!file) { fprintf(stderr, "%s failed to open\n", fname.c_str()); exit(1); }
+
+  printf("Processing %s\n\n", fname.c_str());
   
+
+  cycles = 0; // accumulate over each core
   // Process each line
   while (getline(file, line)) {
     sv.clear(); // clear vector/streams and insert new line
@@ -36,10 +39,8 @@ int main(int argc, char** argv)
 
     while (ss >> s) sv.push_back(s); // process string stream into vector
 
-    // print each line
-    for (i = 0; i < sv.size(); i++) { printf("%s ", sv[i].c_str()); }
-    printf("\n");
-  }
+    printf("%s\n\n", line.c_str());
+    }
 
   return 0;
 }
