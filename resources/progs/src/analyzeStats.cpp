@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   string line, subs, prev;
   long numCycles, l2_accesses, l2_misses, l2_hits; // accumulate over all cores
   long l1i_hits, l1i_accesses, l1i_misses, l1d_accesses, l1d_hits, l1d_misses; 
-  long insts; // commit instructions
+  long long insts; // commit instructions
   long meta_hits, meta_accesses, meta_misses;
   double ipc;
 
@@ -65,6 +65,7 @@ int main(int argc, char** argv) {
           || prev == "board.processor.switch3.core.ipc") {
           
           printf("%s,     %s\n", prev.c_str(), subs.c_str()); 
+          ipc += stod(subs.c_str());
         }
 
         if (prev == "board.processor.switch0.core.commitStats0.numInsts"
@@ -73,8 +74,8 @@ int main(int argc, char** argv) {
           || prev == "board.processor.switch3.core.commitStats0.numInsts") {
           
           printf("%s,     %s\n", prev.c_str(), subs.c_str()); 
-          insts += atoi(subs.c_str());
-        }
+          insts += strtoll(subs.c_str(), nullptr, 10);
+          }
 
         // L1
         if (prev == "board.cache_hierarchy.l1dcaches0.overallHits::total"
@@ -144,17 +145,7 @@ int main(int argc, char** argv) {
 
   printf("\n\n===========\n Final Statistics: \n===========\n\n");
 
-  printf("numCycles:              %ld\n", numCycles);
-  //printf("ipc:                  %lf\n", ipc / 4);
-  printf("Commit Instructions:    %ld\n", numCycles);
-  printf("L1I Accesses:           %ld\n", l1i_accesses);
-  printf("L1I Hits:               %ld\n", l1i_hits);
-  printf("L1I Misses:             %ld\n", l1i_misses);
-  printf("L1D Accesses:           %ld\n", l1d_accesses);
-  printf("L1D Hits:               %ld\n", l1d_hits);
-  printf("L1D Misses:             %ld\n", l1d_misses);
-  printf("L2 Accesses:            %ld\n", l2_accesses);
-  printf("L2 Hits:                %ld\n", l2_hits);
-  printf("L2 Misses:              %ld\n", l2_misses);
+  printf("numCycles IPC Commit-Instructions L1I-Accesses L1I-Hits L1I-Misses L1D-Accesses L1D-Hits L1D-Misses L2-Accesses L2-Hits L2-Misses\n\n");
+  printf("%ld  %.4f  %lld  %ld  %ld  %ld  %ld  %ld  %ld  %ld  %ld  %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses);
   return 1;
 }
