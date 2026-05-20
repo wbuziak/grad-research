@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   long l1i_hits, l1i_accesses, l1i_misses, l1d_accesses, l1d_hits, l1d_misses; 
   long long insts; // commit instructions
   long meta_hits, meta_accesses, meta_misses;
-  long reqs_processed;
+  long long reqs_processed;
   double ipc;
 
   if (argc != 2 && argc != 3 && argc != 4) { printf("USAGE:\n\n./bin/analyze stat-file\n./bin/analyze stat-file output-name.csv\n\n"); exit(1); }
@@ -166,6 +166,6 @@ int main(int argc, char** argv) {
   printf("\n\n===========\n Final Statistics: \n===========\n\n");
 
   printf("numCycles IPC Commit-Instructions L1I-Accesses L1I-Hits L1I-Misses L1D-Accesses L1D-Hits L1D-Misses L2-Accesses L2-Hits L2-Misses Requests-Processed Meta-Accesses Meta-Hits Meta-Misses\n\n");
-  printf("%ld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses, reqs_processed, meta_accesses, meta_hits, meta_misses);
+  printf("%ld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld %lld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses, reqs_processed, meta_accesses, meta_hits, meta_misses);
   return 1;
 }
