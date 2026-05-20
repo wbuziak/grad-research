@@ -5,7 +5,7 @@ INPUT=$1 # input file name
 make
 
 # Create jgr files
-./bin/graphStats $INPUT
+./bin/graph $INPUT
 
 # Call jgraph on every jgr file
 jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg

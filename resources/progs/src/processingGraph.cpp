@@ -7,6 +7,7 @@
 #include <string>
 #include <sstream>
 #include <cstring>
+#include <cstdio>
 #include <unordered_map>
 using namespace std;
 
@@ -42,7 +43,9 @@ int main(int argc, char** argv)
   unordered_multimap <string, string> numCycles, ipc, insts, l1i_acc, l1i_hits, l1i_miss;
   unordered_multimap <string, string> l1d_acc, l1d_hits, l1d_miss, l2_acc, l2_hits, l2_miss;
   unordered_multimap <string, string>::iterator mit;
-  int count, color;
+  int count;
+  double Cycles, Ipc, Insts, L1i_acc, L1i_hits, L1i_miss, L1d_acc, L1d_hits, L1d_miss;
+  double L2_acc, L2_hits, L2_miss;
 
   if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/stats.csv\n"); exit(1); }
 
@@ -56,6 +59,7 @@ int main(int argc, char** argv)
   printf("Processing %s\n\n", fname.c_str());
   
   // Process each line
+  Cycles = 0;
   while (getline(file, line)) {
      // FIX: Strip the invisible carriage return if it exists
      if (!line.empty() && line.back() == '\r') {
@@ -68,19 +72,34 @@ int main(int argc, char** argv)
      words = parse_line(line);
         
      if (!words.empty()) {
-        numCycles.insert(make_pair(words[0], words[7]));
-        ipc.insert(make_pair(words[0], words[8]));
-        insts.insert(make_pair(words[0], words[9]));
-        l1i_acc.insert(make_pair(words[0], words[10]));
-        l1i_hits.insert(make_pair(words[0], words[11]));
-        l1i_miss.insert(make_pair(words[0], words[12]));
-        l1d_acc.insert(make_pair(words[0], words[13]));
-        l1d_hits.insert(make_pair(words[0], words[14]));
-        l1d_miss.insert(make_pair(words[0], words[15]));
-        l2_acc.insert(make_pair(words[0], words[16]));
-        l2_hits.insert(make_pair(words[0], words[17]));
-        l2_miss.insert(make_pair(words[0], words[18]));
+        numCycles.insert(make_pair(words[1], words[7]));
+        ipc.insert(make_pair(words[1], words[8]));
+        insts.insert(make_pair(words[1], words[9]));
+        l1i_acc.insert(make_pair(words[1], words[10]));
+        l1i_hits.insert(make_pair(words[1], words[11]));
+        l1i_miss.insert(make_pair(words[1], words[12]));
+        l1d_acc.insert(make_pair(words[1], words[13]));
+        l1d_hits.insert(make_pair(words[1], words[14]));
+        l1d_miss.insert(make_pair(words[1], words[15]));
+        l2_acc.insert(make_pair(words[1], words[16]));
+        l2_hits.insert(make_pair(words[1], words[17]));
+        l2_miss.insert(make_pair(words[1], words[18]));
+
+      // Find max values for normalization
+      if (Cycles < strtod(words[7].c_str(), NULL)) Cycles = strtod(words[7].c_str(), NULL);
+      if (Ipc < strtod(words[8].c_str(), NULL)) Ipc = strtod(words[8].c_str(), NULL);
+      if (Insts < strtod(words[9].c_str(), NULL)) Insts = strtod(words[9].c_str(), NULL);
+      if (L1i_acc < strtod(words[10].c_str(), NULL)) L1i_acc = strtod(words[10].c_str(), NULL);
+      if (L1i_hits < strtod(words[11].c_str(), NULL)) L1i_hits = strtod(words[11].c_str(), NULL);
+      if (L1i_miss < strtod(words[12].c_str(), NULL)) L1i_miss = strtod(words[12].c_str(), NULL);
+      if (L1d_acc < strtod(words[13].c_str(), NULL)) L1d_acc = strtod(words[13].c_str(), NULL);
+      if (L1d_hits < strtod(words[14].c_str(), NULL)) L1d_hits = strtod(words[14].c_str(), NULL);
+      if (L1d_miss < strtod(words[15].c_str(), NULL)) L1d_miss = strtod(words[15].c_str(), NULL);
+      if (L2_acc < strtod(words[16].c_str(), NULL)) L2_acc = strtod(words[16].c_str(), NULL);
+      if (L2_hits < strtod(words[17].c_str(), NULL)) L2_hits = strtod(words[17].c_str(), NULL);
+      if (L2_miss < strtod(words[18].c_str(), NULL)) L2_miss = strtod(words[18].c_str(), NULL);
     }
+
   }
 
   // create graphs
@@ -90,561 +109,529 @@ int main(int argc, char** argv)
   ofile.open("jgr/numCycles.jgr");
   if (!ofile.is_open()) { printf("failed to open numCycles.jgr\n");  return 1; }
   // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
 
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n"; 
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n"; 
   ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
 
   // y axis bounds
-  ofile << "yaxis min 0 max 10000000000 size 5\n  label : numCycles\n  grid_lines grid_gray .7\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : numCycles (Normalized)\n  grid_lines grid_gray .7\n\n";
   // legend
   ofile << "legend top\n\n";
   ofile << "newline pts .1 0 10.9 0\n\n"; // do this so xaxis is not grey
 
   // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 5\n\n label : Configurable Security\n\n  pts\n  ";
 
   // place bars
   count = 1;
-  color = 0;
   for (mit = numCycles.begin(); mit != numCycles.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 5\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 5\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 5\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) {
+        ofile << "  label : No Security\n\n  pts\n  ";
+      } else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) {
+        ofile << "  label : Configurable Security\n\n  pts\n  ";
+      } else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) {
+        ofile << "  label : Integrity Tree\n\n  pts\n  ";
+      } else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) {
+        ofile << "  label : MCX - Never\n\n  pts\n  ";
+      } else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / Cycles << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
-
-  // =============ipc============== //
-  // create a jgr file
+// =============ipc============== //
   ofile.open("jgr/ipc.jgr");
   if (!ofile.is_open()) { printf("failed to open ipc.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n"; 
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 5 size 5\n  label : IPC (Average over all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : IPC (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = ipc.begin(); mit != ipc.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / Ipc << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============commit instructions============== //
-  // create a jgr file
   ofile.open("jgr/insts.jgr");
   if (!ofile.is_open()) { printf("failed to open insts.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n"; 
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 500000000 size 5\n  label : Number of Commit Instructions (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : Commit Instructions (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = insts.begin(); mit != insts.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / Insts << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============L1I - Accesses============== //
-  // create a jgr file
   ofile.open("jgr/l1i-acc.jgr");
   if (!ofile.is_open()) { printf("failed to open l1i-acc.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n"; 
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 80000000 size 5\n  label : Number of L1 I-Cache Accesses (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L1 I-Cache Accesses (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l1i_acc.begin(); mit != l1i_acc.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L1i_acc << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============L1I - Hits============== //
-  // create a jgr file
   ofile.open("jgr/l1i-hits.jgr");
   if (!ofile.is_open()) { printf("failed to open l1i-hits.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n"; 
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 80000000 size 5\n  label : Number of L1 I-Cache Hits (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L1 I-Cache Hits (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l1i_hits.begin(); mit != l1i_hits.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L1i_hits << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============L1I - Misses============== //
-  // create a jgr file
   ofile.open("jgr/l1i-miss.jgr");
   if (!ofile.is_open()) { printf("failed to open l1i-miss.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n"; 
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 500000 size 5\n  label : Number of L1 I-Cache Misses (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L1 I-Cache Misses (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l1i_miss.begin(); mit != l1i_miss.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L1i_miss << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
 // =============L1D - Accesses============== //
-  // create a jgr file
   ofile.open("jgr/l1d-acc.jgr");
   if (!ofile.is_open()) { printf("failed to open l1d-acc.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n";
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 200000000 size 5\n  label : Number of L1 D-Cache Accesses (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L1 D-Cache Accesses (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l1d_acc.begin(); mit != l1d_acc.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L1d_acc << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============L1D - Hits============== //
-  // create a jgr file
   ofile.open("jgr/l1d-hits.jgr");
   if (!ofile.is_open()) { printf("failed to open l1d-hits.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n";
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 200000000 size 5\n  label : Number of L1 D-Cache Hits (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L1 D-Cache Hits (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l1d_hits.begin(); mit != l1d_hits.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L1d_hits << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============L1D - Misses============== //
-  // create a jgr file
   ofile.open("jgr/l1d-miss.jgr");
   if (!ofile.is_open()) { printf("failed to open l1d-miss.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n";
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 20000000 size 5\n  label : Number of L1 D-Cache Misses (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L1 D-Cache Misses (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l1d_miss.begin(); mit != l1d_miss.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L1d_miss << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============L2 - Accesses============== //
-  // create a jgr file
   ofile.open("jgr/l2-acc.jgr");
   if (!ofile.is_open()) { printf("failed to open l2-acc.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n";
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 20000000 size 5\n  label : Number of L2 Cache Accesses (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L2 Cache Accesses (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l2_acc.begin(); mit != l2_acc.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L2_acc << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============L2 - Hits============== //
-  // create a jgr file
   ofile.open("jgr/l2-hits.jgr");
   if (!ofile.is_open()) { printf("failed to open l2-hits.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n";
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 3000000 size 5\n  label : Number of L2 Cache Hits (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L2 Cache Hits (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l2_hits.begin(); mit != l2_hits.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L2_hits << "\n\n";
     count++;
   }
   ofile << "\n";
   ofile.close();
 
   // =============L2 - Misses============== //
-  // create a jgr file
   ofile.open("jgr/l2-miss.jgr");
   if (!ofile.is_open()) { printf("failed to open l2-miss.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 16.9 mhash 0 shash 0\n  label : Benchmark\n\n";
-
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
   ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 6 : Bodytrack\n";
-  ofile << "  hash_label at 10 : Fluidanimate\n";
-  ofile << "  hash_label at 14 : Blackscholes\n\n";
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
-
-  // y axis bounds
-  ofile << "yaxis min 0 max 20000000 size 5\n  label : Number of L2 Cache Misses (all cores)\n  grid_lines grid_gray .7\n\n";
-  // legend
+  ofile << "  hash_label at 7 : Bodytrack\n";
+  ofile << "  hash_label at 12 : Fluidanimate\n";
+  ofile << "  hash_label at 17 : Blackscholes\n\n";
+  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : L2 Cache Misses (Normalized)\n  grid_lines grid_gray .7\n\n";
   ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 5.9 0\n\n"; // do this so xaxis is not grey
+  ofile << "newline pts .1 0 10.9 0\n\n";
 
-  // color bars
-  ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 0\n\n label : Configurable Security\n\n  pts\n  ";
-
-  // place bars
   count = 1;
-  color = 0;
   for (mit = l2_miss.begin(); mit != l2_miss.end(); mit++) {
-    if (count % 4 == 0) {
+    if (count % 5 == 0) {
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
       ofile << count << " " << 0 << " ";
-      if (color == 0) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 0\n\n label : Integrity Tree\n\n  pts\n  ";
-      }
-      else if (color == 1) {
-        ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 0\n\n label : MCX - Never\n\n  pts\n  ";
-      }
-      else {
-        ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 0\n\n  pts\n  ";
-      }
-      color++;
       count++;
     }
-    ofile << count << " " << mit->second << " ";
+    if (count % 5 == 1) {
+      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : No Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    if (count % 5 == 2) {
+      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Configurable Security\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 3) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : Integrity Tree\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    else if (count % 5 == 4) {
+      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
+      if (count < 5) ofile << "  label : MCX - Never\n\n  pts\n  "; else ofile << "  pts \n  ";
+    }
+    ofile << count << " " << strtod(mit->second.c_str(), NULL) / L2_miss << "\n\n";
     count++;
   }
   ofile << "\n";

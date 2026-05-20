@@ -1,0 +1,196 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <unordered_map>
+#include <cstdlib>
+
+using namespace std;
+
+// Structure to hold all stats for a specific combination of Benchmark and Policy
+struct Stats {
+    double cycles, ipc, insts;
+    double l1i_acc, l1i_hits, l1i_miss;
+    double l1d_acc, l1d_hits, l1d_miss;
+    double l2_acc, l2_hits, l2_miss;
+    
+    Stats() : cycles(0), ipc(0), insts(0), l1i_acc(0), l1i_hits(0), l1i_miss(0),
+              l1d_acc(0), l1d_hits(0), l1d_miss(0), l2_acc(0), l2_hits(0), l2_miss(0) {}
+};
+
+vector<string> parse_line(string line) {
+  istringstream ss(line);
+  vector<string> words;
+  string word;
+  
+  while (getline(ss, word, ',')) {
+      words.push_back(word);
+  }
+  return words;
+}
+
+int main(int argc, char** argv)
+{
+  string fname, line;
+  ifstream file;
+  ofstream ofile;
+  vector<string> words;
+  
+  // C++98 compliant vector initialization
+  vector<string> order_benchmarks;
+  order_benchmarks.push_back("Canneal");
+  order_benchmarks.push_back("Bodytrack");
+  order_benchmarks.push_back("Fluidanimate");
+  order_benchmarks.push_back("Blackscholes");
+
+  vector<string> order_policies;
+  order_policies.push_back("No Security");
+  order_policies.push_back("Configurable");
+  order_policies.push_back("Integrity Tree");
+  order_policies.push_back("MCX - never");
+
+  // Map to hold Benchmark -> (Policy -> Stats)
+  // Added space between > > for older compiler compliance
+  unordered_map<string, unordered_map<string, Stats> > data;
+
+  int count;
+  double max_cycles = 0, max_ipc = 0, max_insts = 0;
+  double max_l1i_acc = 0, max_l1i_hits = 0, max_l1i_miss = 0;
+  double max_l1d_acc = 0, max_l1d_hits = 0, max_l1d_miss = 0;
+  double max_l2_acc = 0, max_l2_hits = 0, max_l2_miss = 0;
+
+  if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/stats.csv\n"); exit(1); }
+
+  fname = argv[1];
+  file.open(fname);
+  if (!file) { fprintf(stderr, "%s failed to open\n", fname.c_str()); exit(1); }
+
+  printf("Processing %s\n\n", fname.c_str());
+
+  // Process each line
+  while (getline(file, line)) {
+     // C++98 compliant way to strip the invisible carriage return
+     if (!line.empty() && line[line.size() - 1] == '\r') {
+         line.erase(line.size() - 1);
+     }
+
+     if (line.empty()) { continue; }
+
+     words = parse_line(line);
+
+     if (words.size() > 18 && words[0] != "Benchmark" && !words[0].empty()) {
+        string bench = words[0];
+        string policy = words[1];
+        
+        // Ensure it's one of the targeted benchmarks
+        if (bench != "Blackscholes" && bench != "Canneal" && bench != "Bodytrack" && bench != "Fluidanimate") {
+            continue;
+        }
+
+        Stats s;
+        s.cycles = strtod(words[7].c_str(), NULL);
+        s.ipc = strtod(words[8].c_str(), NULL);
+        s.insts = strtod(words[9].c_str(), NULL);
+        s.l1i_acc = strtod(words[10].c_str(), NULL);
+        s.l1i_hits = strtod(words[11].c_str(), NULL);
+        s.l1i_miss = strtod(words[12].c_str(), NULL);
+        s.l1d_acc = strtod(words[13].c_str(), NULL);
+        s.l1d_hits = strtod(words[14].c_str(), NULL);
+        s.l1d_miss = strtod(words[15].c_str(), NULL);
+        s.l2_acc = strtod(words[16].c_str(), NULL);
+        s.l2_hits = strtod(words[17].c_str(), NULL);
+        s.l2_miss = strtod(words[18].c_str(), NULL);
+
+        data[bench][policy] = s;
+
+        // Find max values for normalization
+        if (max_cycles < s.cycles) max_cycles = s.cycles;
+        if (max_ipc < s.ipc) max_ipc = s.ipc;
+        if (max_insts < s.insts) max_insts = s.insts;
+        if (max_l1i_acc < s.l1i_acc) max_l1i_acc = s.l1i_acc;
+        if (max_l1i_hits < s.l1i_hits) max_l1i_hits = s.l1i_hits;
+        if (max_l1i_miss < s.l1i_miss) max_l1i_miss = s.l1i_miss;
+        if (max_l1d_acc < s.l1d_acc) max_l1d_acc = s.l1d_acc;
+        if (max_l1d_hits < s.l1d_hits) max_l1d_hits = s.l1d_hits;
+        if (max_l1d_miss < s.l1d_miss) max_l1d_miss = s.l1d_miss;
+        if (max_l2_acc < s.l2_acc) max_l2_acc = s.l2_acc;
+        if (max_l2_hits < s.l2_hits) max_l2_hits = s.l2_hits;
+        if (max_l2_miss < s.l2_miss) max_l2_miss = s.l2_miss;
+    }
+  }
+
+  // Helper macro to generate graphs (rewritten to remove auto, lambdas, and range-based loops)
+  #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR, MAX_VAR) \
+  do { \
+      ofile.open("jgr/" FILENAME); \
+      if (!ofile.is_open()) { printf("failed to open %s\n", FILENAME); return 1; } \
+      ofile << "newgraph\n\nxaxis size 5\n  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n"; \
+      ofile << "  no_auto_hash_labels\n"; \
+      ofile << "  hash_label at 2.5 : Canneal\n"; \
+      ofile << "  hash_label at 7.5 : Bodytrack\n"; \
+      ofile << "  hash_label at 12.5 : Fluidanimate\n"; \
+      ofile << "  hash_label at 17.5 : Blackscholes\n\n"; \
+      ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
+      ofile << "yaxis min 0 max 1 size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n\n"; \
+      ofile << "legend top\n\nnewline pts .1 0 10.9 0\n\n"; \
+      \
+      count = 1; \
+      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+          string bench = order_benchmarks[b_idx]; \
+          for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
+              string policy = order_policies[p_idx]; \
+              double val = data[bench][policy].STAT_VAR; \
+              double normalized_val = (MAX_VAR > 0) ? (val / MAX_VAR) : 0; \
+              \
+              if (p_idx == 0) { \
+                  ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .8 .025\n"; \
+                  if (count <= 5) ofile << "  label : No Security\n"; \
+              } else if (p_idx == 1) { \
+                  ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .8 .025\n"; \
+                  if (count <= 5) ofile << "  label : Configurable Security\n"; \
+              } else if (p_idx == 2) { \
+                  ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .8 .025\n"; \
+                  if (count <= 5) ofile << "  label : Integrity Tree\n"; \
+              } else if (p_idx == 3) { \
+                  ofile << "newcurve marktype xbar cfill 1 0 1\n  marksize .8 .025\n"; \
+                  if (count <= 5) ofile << "  label : MCX - Never\n"; \
+              } \
+              ofile << "  pts\n  " << count << " " << normalized_val << "\n\n"; \
+              count++; \
+          } \
+          /* Add the spacer blank bar */ \
+          ofile << "newcurve marktype xbar cfill 0 1 1\n  marksize .8 .025\n  pts\n  " << count << " 0\n\n"; \
+          count++; \
+      } \
+      ofile.close(); \
+  } while (0)
+
+  // ============= Generate All Graphs ============== //
+  GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles, max_cycles);
+  GENERATE_GRAPH("ipc.jgr", "IPC (Normalized)", ipc, max_ipc);
+  GENERATE_GRAPH("insts.jgr", "Commit Instructions (Normalized)", insts, max_insts);
+  GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc, max_l1i_acc);
+  GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits, max_l1i_hits);
+  GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss, max_l1i_miss);
+  GENERATE_GRAPH("l1d-acc.jgr", "L1 D-Cache Accesses (Normalized)", l1d_acc, max_l1d_acc);
+  GENERATE_GRAPH("l1d-hits.jgr", "L1 D-Cache Hits (Normalized)", l1d_hits, max_l1d_hits);
+  GENERATE_GRAPH("l1d-miss.jgr", "L1 D-Cache Misses (Normalized)", l1d_miss, max_l1d_miss);
+  GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc, max_l2_acc);
+  GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits, max_l2_hits);
+  GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss, max_l2_miss);
+
+  printf("jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg\n");
+  printf("jgraph -P jgr/ipc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/ipc.jpg\n");
+  printf("jgraph -P jgr/insts.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/insts.jpg\n");
+  printf("jgraph -P jgr/l1i-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1i-acc.jpg\n");
+  printf("jgraph -P jgr/l1i-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1i-hits.jpg\n");
+  printf("jgraph -P jgr/l1i-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1i-miss.jpg\n");
+  printf("jgraph -P jgr/l1d-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1d-acc.jpg\n");
+  printf("jgraph -P jgr/l1d-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1d-hits.jpg\n");
+  printf("jgraph -P jgr/l1d-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1d-miss.jpg\n");
+  printf("jgraph -P jgr/l2-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-acc.jpg\n");
+  printf("jgraph -P jgr/l2-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-hits.jpg\n");
+  printf("jgraph -P jgr/l2-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-miss.jpg\n");
+  return 0;
+}
