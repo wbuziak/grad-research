@@ -146,6 +146,6 @@ int main(int argc, char** argv) {
   printf("\n\n===========\n Final Statistics: \n===========\n\n");
 
   printf("numCycles IPC Commit-Instructions L1I-Accesses L1I-Hits L1I-Misses L1D-Accesses L1D-Hits L1D-Misses L2-Accesses L2-Hits L2-Misses\n\n");
-  printf("%ld  %.4f  %lld  %ld  %ld  %ld  %ld  %ld  %ld  %ld  %ld  %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses);
+  printf("%ld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses);
   return 1;
 }
