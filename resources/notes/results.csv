@@ -1,0 +1,17 @@
+Benchmark,memory policy,metadata Cache Size,simSize,L3 size,Encryption,Hashing,numCycles,IPC,Commit-Instructions,L1I-Accesses,L1I-Hits,L1I-Misses,L1D-Accesses,L1D-Hits,L1D-Misses,L2-Accesses,L2-Hits,L2-Misses
+,,,,,,,,,,,,,,,,,,
+Blackscholes,Configurable,none,simlarge,none,no,no,179923065,2.7762,499472369,62477951,62454684,23267,157908747,157857077,51670,707800,21968,685832
+Blackscholes,Integrity Tree,64KB,simlarge,none,yes,yes,180403279,2.7337,493198099,61650653,61626662,23991,155911499,155862743,48756,700099,20853,679246
+Blackscholes,MCX - never,64KB,simlarge,256KiB,yes,yes,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+Fluidanimate,Configurable,none,simlarge,none,no,no,308808979,1.4726,455204505,71698798,71678400,20398,158586765,156164585,2422180,1330494,167324,1163170
+Fluidanimate,Integrity Tree,64KB,simlarge,none,yes,yes,308808979,1.4726,455204505,71698798,71678400,20398,158586765,156164585,2422180,1330494,167324,1163170
+Fluidanimate,MCX - never,64KB,simlarge,256KiB,yes,yes,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+Bodytrack,Configurable,none,simlarge,none,no,no,656750317,0.7455,489731223,41455485,41088554,366931,114589244,108362514,6226730,5869790,2637858,3231932
+Bodytrack,Integrity Tree,64KB,simlarge,none,yes,yes,859304781,0.5797,498177669,42099453,41697026,402427,116221349,109861503,6359846,5986685,2578708,3407977
+Bodytrack,MCX - never,64KB,simlarge,256KiB,yes,yes,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,
+Canneal,Configurable,none,simlarge,none,no,no,3122424334,0.159,496543453,68858392,68756912,101480,165760074,154026051,11734023,13048228,1077589,11970639
+Canneal,Integrity Tree,64KB,simlarge,none,yes,yes,7542540192,0.0659,496978638,69166193,69044058,122135,166483872,154512446,11971426,13252199,1113881,12138318
+Canneal,MCX - never,64KB,simlarge,256KiB,yes,yes,,,,,,,,,,,,
