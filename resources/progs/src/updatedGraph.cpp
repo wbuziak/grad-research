@@ -14,9 +14,11 @@ struct Stats {
     double l1i_acc, l1i_hits, l1i_miss;
     double l1d_acc, l1d_hits, l1d_miss;
     double l2_acc, l2_hits, l2_miss;
+    double req_handled, meta_acc, meta_hits, meta_miss;
     
     Stats() : cycles(0), ipc(0), insts(0), l1i_acc(0), l1i_hits(0), l1i_miss(0),
-              l1d_acc(0), l1d_hits(0), l1d_miss(0), l2_acc(0), l2_hits(0), l2_miss(0) {}
+              l1d_acc(0), l1d_hits(0), l1d_miss(0), l2_acc(0), l2_hits(0), l2_miss(0),
+              req_handled(0), meta_acc(0), meta_hits(0), meta_miss(0) {}
 };
 
 vector<string> parse_line(string line) {
@@ -51,7 +53,6 @@ int main(int argc, char** argv)
   order_policies.push_back("MCX - never");
 
   // Map to hold Benchmark -> (Policy -> Stats)
-  // Added space between > > for older compiler compliance
   unordered_map<string, unordered_map<string, Stats> > data;
 
   int count;
@@ -59,6 +60,7 @@ int main(int argc, char** argv)
   double max_l1i_acc = 0, max_l1i_hits = 0, max_l1i_miss = 0;
   double max_l1d_acc = 0, max_l1d_hits = 0, max_l1d_miss = 0;
   double max_l2_acc = 0, max_l2_hits = 0, max_l2_miss = 0;
+  double max_req_handled = 0, max_meta_acc = 0, max_meta_hits = 0, max_meta_miss = 0;
 
   if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/stats.csv\n"); exit(1); }
 
@@ -102,6 +104,12 @@ int main(int argc, char** argv)
         s.l2_hits = strtod(words[17].c_str(), NULL);
         s.l2_miss = strtod(words[18].c_str(), NULL);
 
+        // Safety checks incase some rows or older CSVs don't have the new columns yet
+        if (words.size() > 19 && !words[19].empty()) s.req_handled = strtod(words[19].c_str(), NULL);
+        if (words.size() > 20 && !words[20].empty()) s.meta_acc = strtod(words[20].c_str(), NULL);
+        if (words.size() > 21 && !words[21].empty()) s.meta_hits = strtod(words[21].c_str(), NULL);
+        if (words.size() > 22 && !words[22].empty()) s.meta_miss = strtod(words[22].c_str(), NULL);
+
         data[bench][policy] = s;
 
         // Find max values for normalization
@@ -117,10 +125,15 @@ int main(int argc, char** argv)
         if (max_l2_acc < s.l2_acc) max_l2_acc = s.l2_acc;
         if (max_l2_hits < s.l2_hits) max_l2_hits = s.l2_hits;
         if (max_l2_miss < s.l2_miss) max_l2_miss = s.l2_miss;
+        
+        if (max_req_handled < s.req_handled) max_req_handled = s.req_handled;
+        if (max_meta_acc < s.meta_acc) max_meta_acc = s.meta_acc;
+        if (max_meta_hits < s.meta_hits) max_meta_hits = s.meta_hits;
+        if (max_meta_miss < s.meta_miss) max_meta_miss = s.meta_miss;
     }
   }
 
-  // Helper macro to generate graphs (rewritten to remove auto, lambdas, and range-based loops)
+  // Helper macro to generate graphs (C++98 compliant)
   #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR, MAX_VAR) \
   do { \
       ofile.open("jgr/" FILENAME); \
@@ -179,6 +192,12 @@ int main(int argc, char** argv)
   GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc, max_l2_acc);
   GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits, max_l2_hits);
   GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss, max_l2_miss);
+  
+  // New Fields
+  GENERATE_GRAPH("req-handled.jgr", "Requests Handled (Normalized)", req_handled, max_req_handled);
+  GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc, max_meta_acc);
+  GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits, max_meta_hits);
+  GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss, max_meta_miss);
 
   printf("jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg\n");
   printf("jgraph -P jgr/ipc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/ipc.jpg\n");
@@ -192,5 +211,12 @@ int main(int argc, char** argv)
   printf("jgraph -P jgr/l2-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-acc.jpg\n");
   printf("jgraph -P jgr/l2-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-hits.jpg\n");
   printf("jgraph -P jgr/l2-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-miss.jpg\n");
+  
+  // Print commands for new fields
+  printf("jgraph -P jgr/req-handled.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/req-handled.jpg\n");
+  printf("jgraph -P jgr/meta-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-acc.jpg\n");
+  printf("jgraph -P jgr/meta-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-hits.jpg\n");
+  printf("jgraph -P jgr/meta-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-miss.jpg\n");
+
   return 0;
 }
