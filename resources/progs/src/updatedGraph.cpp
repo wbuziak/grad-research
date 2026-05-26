@@ -56,11 +56,6 @@ int main(int argc, char** argv)
   unordered_map<string, unordered_map<string, Stats> > data;
 
   int count;
-  double max_cycles = 0, max_ipc = 0, max_insts = 0;
-  double max_l1i_acc = 0, max_l1i_hits = 0, max_l1i_miss = 0;
-  double max_l1d_acc = 0, max_l1d_hits = 0, max_l1d_miss = 0;
-  double max_l2_acc = 0, max_l2_hits = 0, max_l2_miss = 0;
-  double max_req_handled = 0, max_meta_acc = 0, max_meta_hits = 0, max_meta_miss = 0;
 
   if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/stats.csv\n"); exit(1); }
 
@@ -111,31 +106,27 @@ int main(int argc, char** argv)
         if (words.size() > 22 && !words[22].empty()) s.meta_miss = strtod(words[22].c_str(), NULL);
 
         data[bench][policy] = s;
-
-        // Find max values for normalization
-        if (max_cycles < s.cycles) max_cycles = s.cycles;
-        if (max_ipc < s.ipc) max_ipc = s.ipc;
-        if (max_insts < s.insts) max_insts = s.insts;
-        if (max_l1i_acc < s.l1i_acc) max_l1i_acc = s.l1i_acc;
-        if (max_l1i_hits < s.l1i_hits) max_l1i_hits = s.l1i_hits;
-        if (max_l1i_miss < s.l1i_miss) max_l1i_miss = s.l1i_miss;
-        if (max_l1d_acc < s.l1d_acc) max_l1d_acc = s.l1d_acc;
-        if (max_l1d_hits < s.l1d_hits) max_l1d_hits = s.l1d_hits;
-        if (max_l1d_miss < s.l1d_miss) max_l1d_miss = s.l1d_miss;
-        if (max_l2_acc < s.l2_acc) max_l2_acc = s.l2_acc;
-        if (max_l2_hits < s.l2_hits) max_l2_hits = s.l2_hits;
-        if (max_l2_miss < s.l2_miss) max_l2_miss = s.l2_miss;
-        
-        if (max_req_handled < s.req_handled) max_req_handled = s.req_handled;
-        if (max_meta_acc < s.meta_acc) max_meta_acc = s.meta_acc;
-        if (max_meta_hits < s.meta_hits) max_meta_hits = s.meta_hits;
-        if (max_meta_miss < s.meta_miss) max_meta_miss = s.meta_miss;
     }
   }
 
   // Helper macro to generate graphs (C++98 compliant)
-  #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR, MAX_VAR) \
+  #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR) \
   do { \
+      /* First pass to find the maximum normalized value for y-axis scaling */ \
+      double max_norm = 0; \
+      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+          string bench = order_benchmarks[b_idx]; \
+          double base_val = data[bench]["No Security"].STAT_VAR; \
+          for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
+              string policy = order_policies[p_idx]; \
+              double val = data[bench][policy].STAT_VAR; \
+              double normalized_val = (base_val > 0) ? (val / base_val) : 0; \
+              if (normalized_val > max_norm) max_norm = normalized_val; \
+          } \
+      } \
+      if (max_norm == 0) max_norm = 1.0; \
+      double y_max = max_norm * 1.1; /* Add 10% headroom */ \
+      \
       ofile.open("jgr/" FILENAME); \
       if (!ofile.is_open()) { printf("failed to open %s\n", FILENAME); return 1; } \
       ofile << "newgraph\n\nxaxis size 5\n  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n"; \
@@ -145,16 +136,17 @@ int main(int argc, char** argv)
       ofile << "  hash_label at 12.5 : Fluidanimate\n"; \
       ofile << "  hash_label at 17.5 : Blackscholes\n\n"; \
       ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
-      ofile << "yaxis min 0 max 1 size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n\n"; \
+      ofile << "yaxis min 0 max " << y_max << " size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n\n"; \
       ofile << "legend top\n\nnewline pts .1 0 10.9 0\n\n"; \
       \
       count = 1; \
       for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
           string bench = order_benchmarks[b_idx]; \
+          double base_val = data[bench]["No Security"].STAT_VAR; \
           for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
               string policy = order_policies[p_idx]; \
               double val = data[bench][policy].STAT_VAR; \
-              double normalized_val = (MAX_VAR > 0) ? (val / MAX_VAR) : 0; \
+              double normalized_val = (base_val > 0) ? (val / base_val) : 0; \
               \
               if (p_idx == 0) { \
                   ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .8 .025\n"; \
@@ -180,24 +172,24 @@ int main(int argc, char** argv)
   } while (0)
 
   // ============= Generate All Graphs ============== //
-  GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles, max_cycles);
-  GENERATE_GRAPH("ipc.jgr", "IPC (Normalized)", ipc, max_ipc);
-  GENERATE_GRAPH("insts.jgr", "Commit Instructions (Normalized)", insts, max_insts);
-  GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc, max_l1i_acc);
-  GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits, max_l1i_hits);
-  GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss, max_l1i_miss);
-  GENERATE_GRAPH("l1d-acc.jgr", "L1 D-Cache Accesses (Normalized)", l1d_acc, max_l1d_acc);
-  GENERATE_GRAPH("l1d-hits.jgr", "L1 D-Cache Hits (Normalized)", l1d_hits, max_l1d_hits);
-  GENERATE_GRAPH("l1d-miss.jgr", "L1 D-Cache Misses (Normalized)", l1d_miss, max_l1d_miss);
-  GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc, max_l2_acc);
-  GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits, max_l2_hits);
-  GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss, max_l2_miss);
+  GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles);
+  GENERATE_GRAPH("ipc.jgr", "IPC (Normalized)", ipc);
+  GENERATE_GRAPH("insts.jgr", "Commit Instructions (Normalized)", insts);
+  GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc);
+  GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits);
+  GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss);
+  GENERATE_GRAPH("l1d-acc.jgr", "L1 D-Cache Accesses (Normalized)", l1d_acc);
+  GENERATE_GRAPH("l1d-hits.jgr", "L1 D-Cache Hits (Normalized)", l1d_hits);
+  GENERATE_GRAPH("l1d-miss.jgr", "L1 D-Cache Misses (Normalized)", l1d_miss);
+  GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc);
+  GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits);
+  GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss);
   
   // New Fields
-  GENERATE_GRAPH("req-handled.jgr", "Requests Handled (Normalized)", req_handled, max_req_handled);
-  GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc, max_meta_acc);
-  GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits, max_meta_hits);
-  GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss, max_meta_miss);
+  GENERATE_GRAPH("req-handled.jgr", "Requests Handled (Normalized)", req_handled);
+  GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc);
+  GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits);
+  GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss);
 
   printf("jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg\n");
   printf("jgraph -P jgr/ipc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/ipc.jpg\n");
