@@ -15,17 +15,18 @@ struct Stats {
     double l1d_acc, l1d_hits, l1d_miss;
     double l2_acc, l2_hits, l2_miss;
     double req_handled, meta_acc, meta_hits, meta_miss;
-    
+    double mem_reads; // New field for Memory Reads
+
     Stats() : cycles(0), ipc(0), insts(0), l1i_acc(0), l1i_hits(0), l1i_miss(0),
               l1d_acc(0), l1d_hits(0), l1d_miss(0), l2_acc(0), l2_hits(0), l2_miss(0),
-              req_handled(0), meta_acc(0), meta_hits(0), meta_miss(0) {}
+              req_handled(0), meta_acc(0), meta_hits(0), meta_miss(0), mem_reads(0) {}
 };
 
 vector<string> parse_line(string line) {
   istringstream ss(line);
   vector<string> words;
   string word;
-  
+
   while (getline(ss, word, ',')) {
       words.push_back(word);
   }
@@ -38,7 +39,7 @@ int main(int argc, char** argv)
   ifstream file;
   ofstream ofile;
   vector<string> words;
-  
+
   // C++98 compliant vector initialization
   vector<string> order_benchmarks;
   order_benchmarks.push_back("Canneal");
@@ -79,7 +80,7 @@ int main(int argc, char** argv)
      if (words.size() > 18 && words[0] != "Benchmark" && !words[0].empty()) {
         string bench = words[0];
         string policy = words[1];
-        
+
         // Ensure it's one of the targeted benchmarks
         if (bench != "Blackscholes" && bench != "Canneal" && bench != "Bodytrack" && bench != "Fluidanimate") {
             continue;
@@ -99,11 +100,13 @@ int main(int argc, char** argv)
         s.l2_hits = strtod(words[17].c_str(), NULL);
         s.l2_miss = strtod(words[18].c_str(), NULL);
 
-        // Safety checks incase some rows or older CSVs don't have the new columns yet
-        if (words.size() > 19 && !words[19].empty()) s.req_handled = strtod(words[19].c_str(), NULL);
-        if (words.size() > 20 && !words[20].empty()) s.meta_acc = strtod(words[20].c_str(), NULL);
-        if (words.size() > 21 && !words[21].empty()) s.meta_hits = strtod(words[21].c_str(), NULL);
-        if (words.size() > 22 && !words[22].empty()) s.meta_miss = strtod(words[22].c_str(), NULL);
+        s.req_handled = strtod(words[19].c_str(), NULL);
+        s.meta_acc = strtod(words[20].c_str(), NULL);
+        s.meta_hits = strtod(words[21].c_str(), NULL);
+        s.meta_miss = strtod(words[22].c_str(), NULL);
+        
+        // Memory Reads Parsing
+        s.mem_reads = strtod(words[23].c_str(), NULL);
 
         data[bench][policy] = s;
     }
@@ -172,9 +175,12 @@ int main(int argc, char** argv)
   } while (0)
 
   // ============= Generate All Graphs ============== //
+  // Cycles, ipc & instructions
   GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles);
   GENERATE_GRAPH("ipc.jgr", "IPC (Normalized)", ipc);
   GENERATE_GRAPH("insts.jgr", "Commit Instructions (Normalized)", insts);
+
+  // On-chip caches
   GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc);
   GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits);
   GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss);
@@ -184,13 +190,17 @@ int main(int argc, char** argv)
   GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc);
   GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits);
   GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss);
-  
-  // New Fields
+
+  // Metadata requests
   GENERATE_GRAPH("req-handled.jgr", "Requests Handled (Normalized)", req_handled);
   GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc);
   GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits);
   GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss);
+  
+  // Memory Reads graph
+  GENERATE_GRAPH("mem-reads.jgr", "Memory Reads (Normalized)", mem_reads);
 
+  // Output jgraph commands for easy copy
   printf("jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg\n");
   printf("jgraph -P jgr/ipc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/ipc.jpg\n");
   printf("jgraph -P jgr/insts.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/insts.jpg\n");
@@ -203,12 +213,11 @@ int main(int argc, char** argv)
   printf("jgraph -P jgr/l2-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-acc.jpg\n");
   printf("jgraph -P jgr/l2-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-hits.jpg\n");
   printf("jgraph -P jgr/l2-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-miss.jpg\n");
-  
-  // Print commands for new fields
   printf("jgraph -P jgr/req-handled.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/req-handled.jpg\n");
   printf("jgraph -P jgr/meta-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-acc.jpg\n");
   printf("jgraph -P jgr/meta-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-hits.jpg\n");
   printf("jgraph -P jgr/meta-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-miss.jpg\n");
+  printf("jgraph -P jgr/mem-reads.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/mem-reads.jpg\n");
 
   return 0;
 }
