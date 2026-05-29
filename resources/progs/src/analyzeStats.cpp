@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
   meta_misses = 0;
   ipc = 0;
   insts = 0;
+  reqs_processed = 0;
   mem_reads = 0;
 
   while (getline(fin, line)) {     

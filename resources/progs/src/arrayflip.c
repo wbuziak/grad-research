@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gem5/m5ops.h>
+// #include <gem5/m5ops.h>
 
 int main(int argc, char** argv) {
   unsigned long int size, iters, buf, i;
