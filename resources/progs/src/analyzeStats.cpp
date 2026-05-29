@@ -16,14 +16,13 @@ int main(int argc, char** argv) {
   long numCycles, l2_accesses, l2_misses, l2_hits; // accumulate over all cores
   long l1i_hits, l1i_accesses, l1i_misses, l1d_accesses, l1d_hits, l1d_misses; 
   long long insts; // commit instructions
-  long meta_hits, meta_accesses, meta_misses;
+  long meta_hits, meta_accesses, meta_misses, mem_reads;
   long long reqs_processed;
   double ipc;
 
   if (argc != 2 && argc != 3 && argc != 4) { printf("USAGE:\n\n./bin/analyze stat-file\n./bin/analyze stat-file output-name.csv\n\n"); exit(1); }
 
   fin.open(argv[1]);
-
 
   if (fin.is_open()) {
     printf("\nStat,          Value\n--------------------\n\n");
@@ -45,6 +44,7 @@ int main(int argc, char** argv) {
   meta_misses = 0;
   ipc = 0;
   insts = 0;
+  mem_reads = 0;
 
   while (getline(fin, line)) {     
       istringstream iss(line);
@@ -155,6 +155,12 @@ int main(int argc, char** argv) {
           printf("%s,     %s\n", prev.c_str(), subs.c_str()); 
           meta_misses = atoi(subs.c_str());
         }
+
+        // Memory reads
+        if (prev == "board.memory.mem_ctrl0.dram.numReads::total") {
+          printf("%s,     %s\n", prev.c_str(), subs.c_str()); 
+          mem_reads = atoi(subs.c_str());
+        }
         prev = subs;
      }
   }
@@ -165,7 +171,7 @@ int main(int argc, char** argv) {
 
   printf("\n\n===========\n Final Statistics: \n===========\n\n");
 
-  printf("numCycles IPC Commit-Instructions L1I-Accesses L1I-Hits L1I-Misses L1D-Accesses L1D-Hits L1D-Misses L2-Accesses L2-Hits L2-Misses Requests-Processed Meta-Accesses Meta-Hits Meta-Misses\n\n");
-  printf("%ld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld %lld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses, reqs_processed, meta_accesses, meta_hits, meta_misses);
+  printf("numCycles IPC Commit-Instructions L1I-Accesses L1I-Hits L1I-Misses L1D-Accesses L1D-Hits L1D-Misses L2-Accesses L2-Hits L2-Misses Requests-Processed Meta-Accesses Meta-Hits Meta-Misses Memory-Accesses\n\n");
+  printf("%ld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld %lld %ld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses, reqs_processed, meta_accesses, meta_hits, meta_misses, mem_reads);
   return 1;
 }
