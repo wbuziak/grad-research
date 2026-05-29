@@ -39,12 +39,12 @@ int main(int argc, char** argv) {
   l2_accesses = 0;
   l2_misses = 0;
   l2_hits = 0;
-  meta_hits = 0;
-  meta_accesses = 0;
-  meta_misses = 0;
+  meta_hits = 1;
+  meta_accesses = 1;
+  meta_misses = 1;
   ipc = 0;
   insts = 0;
-  reqs_processed = 0;
+  reqs_processed = 1;
   mem_reads = 0;
 
   while (getline(fin, line)) {     
