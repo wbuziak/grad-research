@@ -42,10 +42,12 @@ int main(int argc, char** argv)
 
   // C++98 compliant vector initialization
   vector<string> order_benchmarks;
-  order_benchmarks.push_back("Canneal");
-  order_benchmarks.push_back("Bodytrack");
-  order_benchmarks.push_back("Fluidanimate");
   order_benchmarks.push_back("Blackscholes");
+  order_benchmarks.push_back("Fluidanimate");
+  order_benchmarks.push_back("Bodytrack");
+  order_benchmarks.push_back("Canneal");
+  order_benchmarks.push_back("Dedup");
+  order_benchmarks.push_back("Streamcluster");
 
   vector<string> order_policies;
   order_policies.push_back("No Security");
@@ -82,7 +84,8 @@ int main(int argc, char** argv)
         string policy = words[1];
 
         // Ensure it's one of the targeted benchmarks
-        if (bench != "Blackscholes" && bench != "Canneal" && bench != "Bodytrack" && bench != "Fluidanimate") {
+        if (bench != "Blackscholes" && bench != "Canneal" && bench != "Bodytrack" && 
+            bench != "Fluidanimate" && bench != "Dedup" && bench != "Streamcluster") {
             continue;
         }
 
@@ -104,7 +107,7 @@ int main(int argc, char** argv)
         s.meta_acc = strtod(words[20].c_str(), NULL);
         s.meta_hits = strtod(words[21].c_str(), NULL);
         s.meta_miss = strtod(words[22].c_str(), NULL);
-        
+
         // Memory Reads Parsing
         s.mem_reads = strtod(words[23].c_str(), NULL);
 
@@ -113,13 +116,13 @@ int main(int argc, char** argv)
   }
 
   // Helper macro to generate graphs (C++98 compliant)
-  #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR) \
+  #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR, BASE_POLICY) \
   do { \
       /* First pass to find the maximum normalized value for y-axis scaling */ \
       double max_norm = 0; \
       for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
           string bench = order_benchmarks[b_idx]; \
-          double base_val = data[bench]["No Security"].STAT_VAR; \
+          double base_val = data[bench][BASE_POLICY].STAT_VAR; \
           for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
               string policy = order_policies[p_idx]; \
               double val = data[bench][policy].STAT_VAR; \
@@ -130,22 +133,28 @@ int main(int argc, char** argv)
       if (max_norm == 0) max_norm = 1.0; \
       double y_max = max_norm * 1.1; /* Add 10% headroom */ \
       \
+      /* Dynamically scale the x-axis configuration based on number of benchmarks */ \
+      double x_max = order_benchmarks.size() * 5.0 + 0.9; \
+      double x_size = order_benchmarks.size() * 1.25; \
+      \
       ofile.open("jgr/" FILENAME); \
       if (!ofile.is_open()) { printf("failed to open %s\n", FILENAME); return 1; } \
-      ofile << "newgraph\n\nxaxis size 5\n  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n"; \
+      ofile << "newgraph\n\nxaxis size " << x_size << "\n  min 0.1 max " << x_max << " mhash 0 shash 0\n  label : Benchmark\n\n"; \
       ofile << "  no_auto_hash_labels\n"; \
-      ofile << "  hash_label at 2.5 : Canneal\n"; \
-      ofile << "  hash_label at 7.5 : Bodytrack\n"; \
-      ofile << "  hash_label at 12.5 : Fluidanimate\n"; \
-      ofile << "  hash_label at 17.5 : Blackscholes\n\n"; \
+      \
+      /* Loop dynamically to output correct tick labels and locations */ \
+      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+          ofile << "  hash_label at " << (b_idx * 5.0 + 2.5) << " : " << order_benchmarks[b_idx] << "\n"; \
+      } \
+      ofile << "\n"; \
       ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
-      ofile << "yaxis min 0 max " << y_max << " size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n\n"; \
-      ofile << "legend top\n\nnewline pts .1 0 10.9 0\n\n"; \
+      ofile << "yaxis min 0 max " << y_max << " size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n  hash .1 mhash 0\n\n"; \
+      ofile << "legend top\n\nnewline pts .1 0 " << x_max << " 0\n\n"; \
       \
       count = 1; \
       for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
           string bench = order_benchmarks[b_idx]; \
-          double base_val = data[bench]["No Security"].STAT_VAR; \
+          double base_val = data[bench][BASE_POLICY].STAT_VAR; \
           for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
               string policy = order_policies[p_idx]; \
               double val = data[bench][policy].STAT_VAR; \
@@ -176,29 +185,28 @@ int main(int argc, char** argv)
 
   // ============= Generate All Graphs ============== //
   // Cycles, ipc & instructions
-  GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles);
-  GENERATE_GRAPH("ipc.jgr", "IPC (Normalized)", ipc);
-  GENERATE_GRAPH("insts.jgr", "Commit Instructions (Normalized)", insts);
+  GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles, "No Security");
+  GENERATE_GRAPH("ipc.jgr", "IPC (Normalized)", ipc, "No Security");
+  GENERATE_GRAPH("insts.jgr", "Commit Instructions (Normalized)", insts, "No Security");
 
   // On-chip caches
-  GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc);
-  GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits);
-  GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss);
-  GENERATE_GRAPH("l1d-acc.jgr", "L1 D-Cache Accesses (Normalized)", l1d_acc);
-  GENERATE_GRAPH("l1d-hits.jgr", "L1 D-Cache Hits (Normalized)", l1d_hits);
-  GENERATE_GRAPH("l1d-miss.jgr", "L1 D-Cache Misses (Normalized)", l1d_miss);
-  GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc);
-  GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits);
-  GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss);
+  GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc, "No Security");
+  GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits, "No Security");
+  GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss, "No Security");
+  GENERATE_GRAPH("l1d-acc.jgr", "L1 D-Cache Accesses (Normalized)", l1d_acc, "No Security");
+  GENERATE_GRAPH("l1d-hits.jgr", "L1 D-Cache Hits (Normalized)", l1d_hits, "No Security");
+  GENERATE_GRAPH("l1d-miss.jgr", "L1 D-Cache Misses (Normalized)", l1d_miss, "No Security");
+  GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc, "No Security");
+  GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits, "No Security");
+  GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss, "No Security");
 
-  // Metadata requests
-  GENERATE_GRAPH("req-handled.jgr", "Requests Handled (Normalized)", req_handled);
-  GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc);
-  GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits);
-  GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss);
-  
+  // Metadata requests (Normalized to Integrity Tree)
+  GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc, "Integrity Tree");
+  GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits, "Integrity Tree");
+  GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss, "Integrity Tree");
+
   // Memory Reads graph
-  GENERATE_GRAPH("mem-reads.jgr", "Memory Reads (Normalized)", mem_reads);
+  GENERATE_GRAPH("mem-reads.jgr", "Memory Reads (Normalized)", mem_reads, "No Security");
 
   // Output jgraph commands for easy copy
   printf("jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg\n");
@@ -213,7 +221,6 @@ int main(int argc, char** argv)
   printf("jgraph -P jgr/l2-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-acc.jpg\n");
   printf("jgraph -P jgr/l2-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-hits.jpg\n");
   printf("jgraph -P jgr/l2-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-miss.jpg\n");
-  printf("jgraph -P jgr/req-handled.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/req-handled.jpg\n");
   printf("jgraph -P jgr/meta-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-acc.jpg\n");
   printf("jgraph -P jgr/meta-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-hits.jpg\n");
   printf("jgraph -P jgr/meta-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-miss.jpg\n");
