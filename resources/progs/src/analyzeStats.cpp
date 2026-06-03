@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
   long numCycles, l2_accesses, l2_misses, l2_hits; // accumulate over all cores
   long l1i_hits, l1i_accesses, l1i_misses, l1d_accesses, l1d_hits, l1d_misses; 
   long long insts; // commit instructions
-  long meta_hits, meta_accesses, meta_misses, mem_reads;
+  long meta_hits, meta_accesses, meta_misses, mem_reads, mem_writes, mem_accesses;
   long long reqs_processed;
   double ipc;
 
@@ -46,6 +46,8 @@ int main(int argc, char** argv) {
   insts = 0;
   reqs_processed = 1;
   mem_reads = 0;
+  mem_writes = 0;
+  mem_accesses = 0;
 
   while (getline(fin, line)) {     
       istringstream iss(line);
@@ -161,6 +163,12 @@ int main(int argc, char** argv) {
         if (prev == "board.memory.mem_ctrl0.dram.numReads::total") {
           printf("%s,     %s\n", prev.c_str(), subs.c_str()); 
           mem_reads = atoi(subs.c_str());
+          mem_accesses += atoi(subs.c_str());
+        }
+        if (prev == "board.memory.mem_ctrl0.dram.numWrites::total") {
+          printf("%s,     %s\n", prev.c_str(), subs.c_str()); 
+          mem_writes = atoi(subs.c_str());
+          mem_accesses += atoi(subs.c_str());
         }
         prev = subs;
      }
@@ -173,6 +181,6 @@ int main(int argc, char** argv) {
   printf("\n\n===========\n Final Statistics: \n===========\n\n");
 
   printf("numCycles IPC Commit-Instructions L1I-Accesses L1I-Hits L1I-Misses L1D-Accesses L1D-Hits L1D-Misses L2-Accesses L2-Hits L2-Misses Requests-Processed Meta-Accesses Meta-Hits Meta-Misses Memory-Accesses\n\n");
-  printf("%ld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld %lld %ld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses, reqs_processed, meta_accesses, meta_hits, meta_misses, mem_reads);
+  printf("%ld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld %lld %ld %ld %ld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses, reqs_processed, meta_accesses, meta_hits, meta_misses, mem_reads, mem_writes, mem_accesses);
   return 1;
 }
