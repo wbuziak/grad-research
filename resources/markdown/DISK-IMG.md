@@ -163,6 +163,14 @@ X86:
  ```
  wget https://dist.gem5.org/dist/develop/images/x86/x86-ubuntu-22-04.gz
  ```
+ - Parsec:
+ ```
+ wget https://gem5dist.blob.core.windows.net/dist/develop/images/x86/ubuntu-18-04/parsec.img.gz
+ ```
+ - linux kernel:
+ ```
+ wget https://gem5dist.blob.core.windows.net/dist/develop/kernels/x86/static/vmlinux-5.2.3
+ ```
 
 RISC-V:
 
@@ -178,4 +186,13 @@ RISC-V:
   ```
   wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
   ```
+
+# Microbenchmark
+
+To compile a micro-benchmark from within the disk image that links the m5 binary and is capable of enacting the gem5 exit conditions:
+
+compile as:
+```
+gcc -no-pie -DGEM5 -I include/ src/micro.c -L lib/ -lm5 -o bin/micro
+```
 
