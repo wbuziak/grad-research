@@ -68,7 +68,9 @@ sudo python3 util/gem5img.py umount mnt
 ```
 
 ## Copy appropriate system files onto image
-This is important for a few files that the image will need to borrow from a real system
+This is important for a few files that the image will need to borrow from a real system 
+
+This gives the disk image the ability to update and install packages from apt
 ```
 sudo cp /etc/resolv.conf mnt/etc/ --remove-destination 
 sudo /bin/mount -o bind /dev/null mnt/dev/null
@@ -117,12 +119,18 @@ scons riscv.CROSS_COMPILE=/home/wbuziak/../../opt/riscv/bin/riscv64-unknown-linu
 
 You will then want to copy this binary onto your disk image sbin/ folder, as per the [disk-image](https://www.gem5.org/documentation/general_docs/fullsystem/disks) documentation.
 
-## For x86
+For x86
 
 Install the x86 compiler (for a host machine with another ISA):
 
 ```
 sudo apt install gcc-x86-64-linux-gnu g++-x86-64-linux-gnu
+```
+
+You can compile the m5 binary for x86 with:
+
+```
+scons build/x86/out/m5 CROSS_COMPILE=x86_64-linux-gnu-
 ```
 
 -----
@@ -163,15 +171,7 @@ In order to successfully simulate a full-system architecture, you must have comp
 
 X86:
 
- - Bootloader:
- ```
- wget https://gem5dist.blob.core.windows.net/dist/develop/kernels/x86/static/vmlinux-5.2.3
- ```
- - Disk Image:
- ```
- wget https://dist.gem5.org/dist/develop/images/x86/x86-ubuntu-22-04.gz
- ```
- - Parsec:
+  - Parsec:
  ```
  wget https://gem5dist.blob.core.windows.net/dist/develop/images/x86/ubuntu-18-04/parsec.img.gz
  ```
@@ -179,6 +179,12 @@ X86:
  ```
  wget https://gem5dist.blob.core.windows.net/dist/develop/kernels/x86/static/vmlinux-5.2.3
  ```
+
+- Disk Image: (standard ubuntu disk image)
+ ```
+ wget https://dist.gem5.org/dist/develop/images/x86/x86-ubuntu-22-04.gz
+ ```
+
 
 RISC-V:
 
@@ -216,6 +222,10 @@ microbenchmark/
   |    |- micro.c
 
   |--- include/
+
+  |    |- m5_mmap.h 
+  |    |- gem5/ 
+  |       |- m5ops.h  
 
 Ensure that you have the following include paths within the header of the microbenchmark:
 

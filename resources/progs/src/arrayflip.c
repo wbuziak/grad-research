@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// #include <gem5/m5ops.h>
+#include <gem5/m5ops.h>
+#include "m5_mmap.h"
 
 int main(int argc, char** argv) {
   unsigned long int size, iters, buf, i;
@@ -41,3 +42,4 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+
