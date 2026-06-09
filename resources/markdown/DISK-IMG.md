@@ -130,7 +130,7 @@ sudo apt install gcc-x86-64-linux-gnu g++-x86-64-linux-gnu
 You can compile the m5 binary for x86 with:
 
 ```
-scons build/x86/out/m5 CROSS_COMPILE=x86_64-linux-gnu-
+scons build/x86/out/m5 x86.CROSS_COMPILE=x86_64-linux-gnu-
 ```
 
 -----
