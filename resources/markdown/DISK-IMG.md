@@ -117,6 +117,14 @@ scons riscv.CROSS_COMPILE=/home/wbuziak/../../opt/riscv/bin/riscv64-unknown-linu
 
 You will then want to copy this binary onto your disk image sbin/ folder, as per the [disk-image](https://www.gem5.org/documentation/general_docs/fullsystem/disks) documentation.
 
+## For x86
+
+Install the x86 compiler (for a host machine with another ISA):
+
+```
+sudo apt install gcc-x86-64-linux-gnu g++-x86-64-linux-gnu
+```
+
 -----
 
 You may also want to compile [the util/term/m5term binary](https://www.gem5.org/documentation/general_docs/fullsystem/m5term) that allows you to connect to a FS serial terminal with the following command:
@@ -196,11 +204,17 @@ You must first add the gem5 m5 binary as well as the include folder from the hos
 Mount the disk image and create the following file structure:
 
 microbenchmark/
+
   |--- bin/
+
   |--- lib/
+
   |    |- libm5.a
+
   |--- src/
+
   |    |- micro.c
+
   |--- include/
 
 Ensure that you have the following include paths within the header of the microbenchmark:
