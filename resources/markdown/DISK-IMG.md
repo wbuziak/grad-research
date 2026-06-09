@@ -191,8 +191,34 @@ RISC-V:
 
 To compile a micro-benchmark from within the disk image that links the m5 binary and is capable of enacting the gem5 exit conditions:
 
-compile as:
+You must first add the gem5 m5 binary as well as the include folder from the host machine.
+
+Mount the disk image and create the following file structure:
+
+microbenchmark/
+  |--- bin/
+  |--- lib/
+  |    |- libm5.a
+  |--- src/
+  |    |- micro.c
+  |--- include/
+
+Ensure that you have the following include paths within the header of the microbenchmark:
+
+```
+#include <gem5/m5ops.h>
+#include "m5_mmap.h"
+```
+
+Then, compile as:
 ```
 gcc -no-pie -DGEM5 -I include/ src/micro.c -L lib/ -lm5 -o bin/micro
+```
+
+If you fail due to the absence of a /dev/mem device, you can create it with the following:
+
+```
+mknod /dev/mem c 1 1
+chmod 660 /dev/mem
 ```
 
