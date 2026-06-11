@@ -227,19 +227,19 @@ microbenchmark/
 
   |--- lib/
 
-  |    |- libm5.a
+  ||---- libm5.a
 
   |--- src/
 
-  |    |- micro.c
+  ||---- micro.c
 
   |--- include/
 
-  |    |- m5_mmap.h 
+  ||---- m5_mmap.h 
 
-  |    |- gem5/ 
+  ||---- gem5/ 
 
-  |       |- m5ops.h  
+  |||---- m5ops.h  
 
 Ensure that you have the following include paths within the header of the microbenchmark:
 
