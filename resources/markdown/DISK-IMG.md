@@ -88,6 +88,18 @@ If that does not work, you can chroot using:
 sudo chroot mnt
 ```
 
+If you have further issues with chroot, it is likely because the disk image is compiled for a different ISA than the host machine, you will need to install qemu-static:
+
+```
+sudo apt install qemu-user-static binfmt-support
+```
+
+Then, copy the binary to the mounted folder:
+
+```
+sudo cp /usr/bin/qemu-x86_64-static /mnt/chroot/usr/bin/
+```
+
 ## change permissions 
 ```
 chmod 777 mnt
@@ -224,7 +236,9 @@ microbenchmark/
   |--- include/
 
   |    |- m5_mmap.h 
+
   |    |- gem5/ 
+
   |       |- m5ops.h  
 
 Ensure that you have the following include paths within the header of the microbenchmark:
