@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export DIRECTORY=$1 # parent directory
+export SPECIFIED=$2 # specified benchmark to print
 
 # Keep track of the current benchmark to print headers
 prev_benchmark=""
@@ -14,6 +15,11 @@ find "$DIRECTORY" -type f -name "stats.txt" | while read -r file; do
     config=$(basename "$great_grandparent_dir")
     bench_dir=$(basename "$grandparent_dir")
     benchmark="${bench_dir%%-*}"
+    
+    # Filter: If SPECIFIED is not empty AND doesn't match the current benchmark, skip it
+    if [ -n "$SPECIFIED" ] && [ "$benchmark" != "$SPECIFIED" ]; then
+        continue
+    fi
     
     # Print out a space-separated string for sorting
     echo "$benchmark $config $file"

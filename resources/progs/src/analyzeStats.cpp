@@ -13,11 +13,11 @@ using namespace std;
 int main(int argc, char** argv) {
   ifstream fin;
   string line, subs, prev;
-  long numCycles, l2_accesses, l2_misses, l2_hits; // accumulate over all cores
+  long l2_accesses, l2_misses, l2_hits; // accumulate over all cores
   long l1i_hits, l1i_accesses, l1i_misses, l1d_accesses, l1d_hits, l1d_misses; 
   long long insts; // commit instructions
   long meta_hits, meta_accesses, meta_misses, mem_reads, mem_writes, mem_accesses;
-  long long reqs_processed;
+  long long reqs_processed, numCycles;
   double ipc;
 
   if (argc != 2 && argc != 3 && argc != 4) { printf("USAGE:\n\n./bin/analyze stat-file\n./bin/analyze stat-file output-name.csv\n\n"); exit(1); }
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
           || prev == "board.processor.switch2.core.numCycles"
           || prev == "board.processor.switch3.core.numCycles") { 
             //printf("%s,     %s\n", prev.c_str(), subs.c_str()); 
-            numCycles += atoi(subs.c_str());
+            numCycles += atoll(subs.c_str());
         }
 
         // IPC
@@ -179,6 +179,6 @@ int main(int argc, char** argv) {
   // print final stats
 
   printf("numCycles IPC Commit-Instructions L1I-Accesses L1I-Hits L1I-Misses L1D-Accesses L1D-Hits L1D-Misses L2-Accesses L2-Hits L2-Misses Requests-Processed Meta-Accesses Meta-Hits Meta-Misses Memory-Accesses\n\n");
-  printf("%ld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld %lld %ld %ld %ld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses, reqs_processed, meta_accesses, meta_hits, meta_misses, mem_reads, mem_writes, mem_accesses);
+  printf("%lld %.4f %lld %ld %ld %ld %ld %ld %ld %ld %ld %ld %lld %ld %ld %ld %ld %ld %ld\n", numCycles, ipc / 4, insts, l1i_accesses, l1i_hits, l1i_misses, l1d_accesses, l1d_hits, l1d_misses, l2_accesses, l2_hits, l2_misses, reqs_processed, meta_accesses, meta_hits, meta_misses, mem_reads, mem_writes, mem_accesses);
   return 1;
 }
