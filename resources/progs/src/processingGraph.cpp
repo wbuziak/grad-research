@@ -7,28 +7,21 @@
 #include <string>
 #include <sstream>
 #include <cstring>
-#include <cstdio>
+#include <cstdlib>
 #include <unordered_map>
+#include <algorithm>
 using namespace std;
 
 vector <string> parse_line(string line) {
-  // parse each line
+  // parse each line without hardcoding the benchmark names
   istringstream ss(line);
   vector <string> words;
   string word;
-  bool collect;
 
-  collect = false;
   words.clear();
 
   while (getline(ss, word, ',')) {
-    if (!collect) {
-      if (word == "Blackscholes" || word == "Canneal" || word == "Bodytrack" || word == "Fluidanimate") {
-        collect = true;
-        words.push_back(word);
-      }
-    }
-    else { words.push_back(word); }
+    words.push_back(word);
   }
 
   return words;
@@ -36,131 +29,146 @@ vector <string> parse_line(string line) {
 
 int main(int argc, char** argv)
 {
-  string fname, line, benchmark;
+  string fname, line;
   ifstream file;
   ofstream ofile;
   vector <string> words;
-  unordered_multimap <string, string> numCycles, ipc, insts, l1i_acc, l1i_hits, l1i_miss;
-  unordered_multimap <string, string> l1d_acc, l1d_hits, l1d_miss, l2_acc, l2_hits, l2_miss;
-  unordered_multimap <string, string>::iterator mit;
-  int count;
-  double Cycles, Ipc, Insts, L1i_acc, L1i_hits, L1i_miss, L1d_acc, L1d_hits, L1d_miss;
-  double L2_acc, L2_hits, L2_miss;
+  vector <string> benchmarks;
+  vector <string> configs;
 
-  if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/stats.csv\n"); exit(1); }
+  // Use a composite key (Benchmark-Config) to map to stats
+  unordered_map <string, string> numCycles, ipc, insts, l1i_acc, l1i_hits, l1i_miss;
+  unordered_map <string, string> l1d_acc, l1d_hits, l1d_miss, l2_acc, l2_hits, l2_miss;
+
+  int count;
+  double Cycles = 0, Ipc = 0, Insts = 0, L1i_acc = 0, L1i_hits = 0, L1i_miss = 0;
+  double L1d_acc = 0, L1d_hits = 0, L1d_miss = 0, L2_acc = 0, L2_hits = 0, L2_miss = 0;
+
+  if (argc != 2) {
+      fprintf(stderr, "USAGE:\n./processGraph \"/path/To/Results - Results_2.csv\"\n");
+      exit(1);
+  }
 
   // grab filename
   fname = argv[1];
 
   // open file
-  file.open(fname);
+  file.open(fname.c_str());
   if (!file) { fprintf(stderr, "%s failed to open\n", fname.c_str()); exit(1); }
 
   printf("Processing %s\n\n", fname.c_str());
-  
+
   // Process each line
-  Cycles = 0;
   while (getline(file, line)) {
      // FIX: Strip the invisible carriage return if it exists
      if (!line.empty() && line.back() == '\r') {
-         line.pop_back(); 
+         line.pop_back();
      }
 
      if (line.empty()) { continue; }
 
      words.clear();
      words = parse_line(line);
-        
-     if (!words.empty()) {
-        numCycles.insert(make_pair(words[1], words[7]));
-        ipc.insert(make_pair(words[1], words[8]));
-        insts.insert(make_pair(words[1], words[9]));
-        l1i_acc.insert(make_pair(words[1], words[10]));
-        l1i_hits.insert(make_pair(words[1], words[11]));
-        l1i_miss.insert(make_pair(words[1], words[12]));
-        l1d_acc.insert(make_pair(words[1], words[13]));
-        l1d_hits.insert(make_pair(words[1], words[14]));
-        l1d_miss.insert(make_pair(words[1], words[15]));
-        l2_acc.insert(make_pair(words[1], words[16]));
-        l2_hits.insert(make_pair(words[1], words[17]));
-        l2_miss.insert(make_pair(words[1], words[18]));
 
-      // Find max values for normalization
-      if (Cycles < strtod(words[7].c_str(), NULL)) Cycles = strtod(words[7].c_str(), NULL);
-      if (Ipc < strtod(words[8].c_str(), NULL)) Ipc = strtod(words[8].c_str(), NULL);
-      if (Insts < strtod(words[9].c_str(), NULL)) Insts = strtod(words[9].c_str(), NULL);
-      if (L1i_acc < strtod(words[10].c_str(), NULL)) L1i_acc = strtod(words[10].c_str(), NULL);
-      if (L1i_hits < strtod(words[11].c_str(), NULL)) L1i_hits = strtod(words[11].c_str(), NULL);
-      if (L1i_miss < strtod(words[12].c_str(), NULL)) L1i_miss = strtod(words[12].c_str(), NULL);
-      if (L1d_acc < strtod(words[13].c_str(), NULL)) L1d_acc = strtod(words[13].c_str(), NULL);
-      if (L1d_hits < strtod(words[14].c_str(), NULL)) L1d_hits = strtod(words[14].c_str(), NULL);
-      if (L1d_miss < strtod(words[15].c_str(), NULL)) L1d_miss = strtod(words[15].c_str(), NULL);
-      if (L2_acc < strtod(words[16].c_str(), NULL)) L2_acc = strtod(words[16].c_str(), NULL);
-      if (L2_hits < strtod(words[17].c_str(), NULL)) L2_hits = strtod(words[17].c_str(), NULL);
-      if (L2_miss < strtod(words[18].c_str(), NULL)) L2_miss = strtod(words[18].c_str(), NULL);
-    }
+     // Check bounds and ensure we aren't reading the header row
+     if (words.size() > 18 && words[1] != "Benchmark" && words[0] != "Config" && words[0] != "System") {
+        string config = words[0];
+        string benchmark = words[1];
 
+        // Track unique benchmarks and configurations dynamically
+        if (find(benchmarks.begin(), benchmarks.end(), benchmark) == benchmarks.end()) {
+            benchmarks.push_back(benchmark);
+        }
+        if (find(configs.begin(), configs.end(), config) == configs.end()) {
+            configs.push_back(config);
+        }
+
+        string key = benchmark + "-" + config;
+
+        numCycles[key] = words[7];
+        ipc[key] = words[8];
+        insts[key] = words[9];
+        l1i_acc[key] = words[10];
+        l1i_hits[key] = words[11];
+        l1i_miss[key] = words[12];
+        l1d_acc[key] = words[13];
+        l1d_hits[key] = words[14];
+        l1d_miss[key] = words[15];
+        l2_acc[key] = words[16];
+        l2_hits[key] = words[17];
+        l2_miss[key] = words[18];
+
+        // Find max values for normalization
+        if (Cycles < strtod(words[7].c_str(), NULL)) Cycles = strtod(words[7].c_str(), NULL);
+        if (Ipc < strtod(words[8].c_str(), NULL)) Ipc = strtod(words[8].c_str(), NULL);
+        if (Insts < strtod(words[9].c_str(), NULL)) Insts = strtod(words[9].c_str(), NULL);
+        if (L1i_acc < strtod(words[10].c_str(), NULL)) L1i_acc = strtod(words[10].c_str(), NULL);
+        if (L1i_hits < strtod(words[11].c_str(), NULL)) L1i_hits = strtod(words[11].c_str(), NULL);
+        if (L1i_miss < strtod(words[12].c_str(), NULL)) L1i_miss = strtod(words[12].c_str(), NULL);
+        if (L1d_acc < strtod(words[13].c_str(), NULL)) L1d_acc = strtod(words[13].c_str(), NULL);
+        if (L1d_hits < strtod(words[14].c_str(), NULL)) L1d_hits = strtod(words[14].c_str(), NULL);
+        if (L1d_miss < strtod(words[15].c_str(), NULL)) L1d_miss = strtod(words[15].c_str(), NULL);
+        if (L2_acc < strtod(words[16].c_str(), NULL)) L2_acc = strtod(words[16].c_str(), NULL);
+        if (L2_hits < strtod(words[17].c_str(), NULL)) L2_hits = strtod(words[17].c_str(), NULL);
+        if (L2_miss < strtod(words[18].c_str(), NULL)) L2_miss = strtod(words[18].c_str(), NULL);
+     }
   }
 
   // create graphs
-
   // =============numCycles============== //
-  // create a jgr file
   ofile.open("jgr/numCycles.jgr");
   if (!ofile.is_open()) { printf("failed to open numCycles.jgr\n");  return 1; }
-  // newgraph set x axis bounds
-  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max 20.9 mhash 0 shash 0\n  label : Benchmark\n\n";
 
+  // Calculate dynamic axis limits based on how many configurations were in the file
+  int block_size = configs.size() + 1;
+  double max_x = benchmarks.size() * block_size + 0.9;
+
+  ofile << "newgraph\n\n" << "xaxis size 5\n" << "  min 0.1 max " << max_x << " mhash 0 shash 0\n  label : Benchmark\n\n";
   ofile << "  no_auto_hash_labels\n";
-  ofile << "  hash_label at 2 : Canneal\n";
-  ofile << "  hash_label at 7 : Bodytrack\n";
-  ofile << "  hash_label at 12 : Fluidanimate\n";
-  ofile << "  hash_label at 17 : Blackscholes\n\n"; 
-  ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; // slant xaxis labels
 
-  // y axis bounds
-  ofile << "yaxis min 0 max 1 size 5\n  label : numCycles (Normalized)\n  grid_lines grid_gray .7\n\n";
-  // legend
-  ofile << "legend top\n\n";
-  ofile << "newline pts .1 0 10.9 0\n\n"; // do this so xaxis is not grey
-
-  // color bars
-
-  // place bars
-  count = 1;
-  for (mit = numCycles.begin(); mit != numCycles.end(); mit++) {
-    if (count % 5 == 0) {
-      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
-      ofile << count << " " << 0 << " ";
-      count++;
-    }
-    if (count % 5 == 1) {
-      ofile << "newcurve marktype xbar cfill 0 1 0\n\n  marksize .8 .025\n\n";
-      if (count < 5) {
-        ofile << "  label : No Security\n\n  pts\n  ";
-      } else ofile << "  pts \n  ";
-    }
-    if (count % 5 == 2) {
-      ofile << "newcurve marktype xbar cfill 1 1 0\n\n  marksize .8 .025\n\n";
-      if (count < 5) {
-        ofile << "  label : Configurable Security\n\n  pts\n  ";
-      } else ofile << "  pts \n  ";
-    }
-    else if (count % 5 == 3) {
-      ofile << "\nnewcurve marktype xbar cfill 1 0 0\n\n  marksize .8 .025\n\n";
-      if (count < 5) {
-        ofile << "  label : Integrity Tree\n\n  pts\n  ";
-      } else ofile << "  pts \n  ";
-    }
-    else if (count % 5 == 4) {
-      ofile << "\nnewcurve marktype xbar cfill 1 0 1\n\n  marksize .8 .025\n\n";
-      if (count < 5) {
-        ofile << "  label : MCX - Never\n\n  pts\n  ";
-      } else ofile << "  pts \n  ";
-    }
-    ofile << count << " " << strtod(mit->second.c_str(), NULL) / Cycles << "\n\n";
-    count++;
+  // Place hash labels in the center of each benchmark cluster
+  for (size_t i = 0; i < benchmarks.size(); i++) {
+      double pos = (i * block_size) + (configs.size() / 2.0) + 1.0;
+      ofile << "  hash_label at " << pos << " : " << benchmarks[i] << "\n";
   }
+
+  ofile << "\n  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n";
+  ofile << "yaxis min 0 max 1 size 5\n  label : numCycles (Normalized)\n  grid_lines grid_gray .7\n\n";
+  ofile << "legend top\n\n";
+  ofile << "newline pts .1 0 " << max_x << " 0\n\n";
+
+  // Palette to cycle through matching the original format style
+  string cfill_colors[] = {"0 1 0", "1 1 0", "1 0 0", "1 0 1", "0 1 1", "0 0 1"};
+
+  count = 1;
+  for (size_t b = 0; b < benchmarks.size(); b++) {
+      for (size_t c = 0; c < configs.size(); c++) {
+          ofile << "newcurve marktype xbar cfill " << cfill_colors[c % 6] << "\n\n  marksize .8 .025\n\n";
+
+          if (b == 0) {
+              ofile << "  label : " << configs[c] << "\n\n  pts\n  ";
+          } else {
+              ofile << "  pts \n  ";
+          }
+
+          string key = benchmarks[b] + "-" + configs[c];
+          double val = 0;
+          if (numCycles.find(key) != numCycles.end()) {
+              val = strtod(numCycles[key].c_str(), NULL);
+          }
+
+          ofile << count << " " << val / Cycles << "\n\n";
+          count++;
+      }
+
+      // Gap spacing between benchmark groups (matches original `count % 5 == 0` logic)
+      ofile << "\nnewcurve marktype xbar cfill 0 1 1\n\n  marksize .8 .025\n\n  pts\n  ";
+      ofile << count << " " << 0 << " \n\n";
+      count++;
+  }
+
   ofile << "\n";
   ofile.close();
+
+  return 0;
 }
