@@ -48,12 +48,17 @@ int main(int argc, char** argv)
   order_benchmarks.push_back("Canneal");
   order_benchmarks.push_back("Dedup");
   order_benchmarks.push_back("Streamcluster");
+  order_benchmarks.push_back("Microbenchmark");
 
   vector<string> order_policies;
   order_policies.push_back("No Security");
-  order_policies.push_back("Configurable");
+  order_policies.push_back("Hashing Only");
+  order_policies.push_back("Encryption Only");
   order_policies.push_back("Integrity Tree");
-  order_policies.push_back("MCX - never");
+  order_policies.push_back("Hashing + Encryption");
+  order_policies.push_back("Hashing + Integrity");
+  order_policies.push_back("Encryption + Integrity");
+  order_policies.push_back("Full Security");
 
   // Map to hold Benchmark -> (Policy -> Stats)
   unordered_map<string, unordered_map<string, Stats> > data;
@@ -85,7 +90,7 @@ int main(int argc, char** argv)
 
         // Ensure it's one of the targeted benchmarks
         if (bench != "Blackscholes" && bench != "Canneal" && bench != "Bodytrack" && 
-            bench != "Fluidanimate" && bench != "Dedup" && bench != "Streamcluster") {
+            bench != "Fluidanimate" && bench != "Dedup" && bench != "Streamcluster" && bench != "Microbenchmark") {
             continue;
         }
 
@@ -134,8 +139,8 @@ int main(int argc, char** argv)
       double y_max = max_norm * 1.1; /* Add 10% headroom */ \
       \
       /* Dynamically scale the x-axis configuration based on number of benchmarks */ \
-      double x_max = order_benchmarks.size() * 5.0 + 0.9; \
-      double x_size = order_benchmarks.size() * 1.25; \
+      double x_max = order_benchmarks.size() * 9.0 + .9; \
+      double x_size = order_benchmarks.size() * 1.1; \
       \
       ofile.open("jgr/" FILENAME); \
       if (!ofile.is_open()) { printf("failed to open %s\n", FILENAME); return 1; } \
@@ -144,7 +149,7 @@ int main(int argc, char** argv)
       \
       /* Loop dynamically to output correct tick labels and locations */ \
       for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
-          ofile << "  hash_label at " << (b_idx * 5.0 + 2.5) << " : " << order_benchmarks[b_idx] << "\n"; \
+          ofile << "  hash_label at " << (b_idx * 9.0 + 4) << " : " << order_benchmarks[b_idx] << "\n"; \
       } \
       ofile << "\n"; \
       ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
@@ -161,17 +166,29 @@ int main(int argc, char** argv)
               double normalized_val = (base_val > 0) ? (val / base_val) : 0; \
               \
               if (p_idx == 0) { \
-                  ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .8 .025\n"; \
-                  if (count <= 5) ofile << "  label : No Security\n"; \
+                  ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .6 .025\n"; \
+                  if (count <= 8) ofile << "  label : No Security\n"; \
               } else if (p_idx == 1) { \
-                  ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .8 .025\n"; \
-                  if (count <= 5) ofile << "  label : Configurable Security\n"; \
+                  ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .6 .025\n"; \
+                  if (count <= 8) ofile << "  label : Hashing Only\n"; \
               } else if (p_idx == 2) { \
-                  ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .8 .025\n"; \
-                  if (count <= 5) ofile << "  label : Integrity Tree\n"; \
+                  ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 .025\n"; \
+                  if (count <= 8) ofile << "  label : Encryption Only\n"; \
               } else if (p_idx == 3) { \
-                  ofile << "newcurve marktype xbar cfill 1 0 1\n  marksize .8 .025\n"; \
-                  if (count <= 5) ofile << "  label : MCX - Never\n"; \
+                  ofile << "newcurve marktype xbar cfill 1 0 1\n  marksize .6 .025\n"; \
+                  if (count <= 8) ofile << "  label : Integrity Tree\n"; \
+              } else if (p_idx == 4) { \
+                  ofile << "newcurve marktype xbar cfill 1 .5 .5\n  marksize .6 .025\n"; \
+                  if (count <= 8) ofile << "  label : Hashing + Encryption\n"; \
+              } else if (p_idx == 5) { \
+                  ofile << "newcurve marktype xbar cfill .5 .1 .2\n  marksize .6 .025\n"; \
+                  if (count <= 8) ofile << "  label : Hashing + Integrity\n"; \
+              }  else if (p_idx == 6) { \
+                  ofile << "newcurve marktype xbar cfill 0 .5 .5\n  marksize .6 .025\n"; \
+                  if (count <= 8) ofile << "  label : Encryption + Integrity\n"; \
+              }  else if (p_idx == 7) { \
+                  ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 .025\n"; \
+                  if (count <= 8) ofile << "  label : Full Security\n"; \
               } \
               ofile << "  pts\n  " << count << " " << normalized_val << "\n\n"; \
               count++; \
