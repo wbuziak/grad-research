@@ -42,8 +42,8 @@ int main(int argc, char** argv)
 
   // C++98 compliant vector initialization
   vector<string> order_benchmarks;
-  order_benchmarks.push_back("Blackscholes");
-  order_benchmarks.push_back("Fluidanimate");
+  //order_benchmarks.push_back("Blackscholes");
+  //order_benchmarks.push_back("Fluidanimate");
   order_benchmarks.push_back("Bodytrack");
   order_benchmarks.push_back("Canneal");
   order_benchmarks.push_back("Dedup");
@@ -54,10 +54,7 @@ int main(int argc, char** argv)
   order_policies.push_back("No Security");
   order_policies.push_back("Hashing Only");
   order_policies.push_back("Encryption Only");
-  order_policies.push_back("Integrity Tree");
   order_policies.push_back("Hashing + Encryption");
-  order_policies.push_back("Hashing + Integrity");
-  order_policies.push_back("Encryption + Integrity");
   order_policies.push_back("Full Security");
 
   // Map to hold Benchmark -> (Policy -> Stats)
@@ -167,28 +164,19 @@ int main(int argc, char** argv)
               \
               if (p_idx == 0) { \
                   ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .6 .025\n"; \
-                  if (count <= 8) ofile << "  label : No Security\n"; \
+                  if (count <= 5) ofile << "  label : No Security\n"; \
               } else if (p_idx == 1) { \
                   ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .6 .025\n"; \
-                  if (count <= 8) ofile << "  label : Hashing Only\n"; \
+                  if (count <= 5) ofile << "  label : Hashing Only\n"; \
               } else if (p_idx == 2) { \
                   ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 .025\n"; \
-                  if (count <= 8) ofile << "  label : Encryption Only\n"; \
+                  if (count <= 5) ofile << "  label : Encryption Only\n"; \
               } else if (p_idx == 3) { \
-                  ofile << "newcurve marktype xbar cfill 1 0 1\n  marksize .6 .025\n"; \
-                  if (count <= 8) ofile << "  label : Integrity Tree\n"; \
-              } else if (p_idx == 4) { \
                   ofile << "newcurve marktype xbar cfill 1 .5 .5\n  marksize .6 .025\n"; \
-                  if (count <= 8) ofile << "  label : Hashing + Encryption\n"; \
-              } else if (p_idx == 5) { \
-                  ofile << "newcurve marktype xbar cfill .5 .1 .2\n  marksize .6 .025\n"; \
-                  if (count <= 8) ofile << "  label : Hashing + Integrity\n"; \
-              }  else if (p_idx == 6) { \
-                  ofile << "newcurve marktype xbar cfill 0 .5 .5\n  marksize .6 .025\n"; \
-                  if (count <= 8) ofile << "  label : Encryption + Integrity\n"; \
-              }  else if (p_idx == 7) { \
+                  if (count <= 5) ofile << "  label : Hashing + Encryption\n"; \
+              }  else if (p_idx == 4) { \
                   ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 .025\n"; \
-                  if (count <= 8) ofile << "  label : Full Security\n"; \
+                  if (count <= 5) ofile << "  label : Full Security\n"; \
               } \
               ofile << "  pts\n  " << count << " " << normalized_val << "\n\n"; \
               count++; \
