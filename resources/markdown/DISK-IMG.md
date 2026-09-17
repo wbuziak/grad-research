@@ -210,7 +210,7 @@ RISC-V:
   ```
   - Disk Image:
   ```
-  wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
+  wget https://dist.gem5.org/dist/develop/images/riscv/ubuntu-20-04/riscv-ubuntu-20221118.img.gz
   ```
 
 # Microbenchmark
