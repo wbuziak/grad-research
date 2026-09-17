@@ -136,7 +136,7 @@ int main(int argc, char** argv)
       double y_max = max_norm * 1.1; /* Add 10% headroom */ \
       \
       /* Dynamically scale the x-axis configuration based on number of benchmarks */ \
-      double x_max = order_benchmarks.size() * 9.0 + .9; \
+      double x_max = order_benchmarks.size() * (order_policies.size() + 1) + .9; \
       double x_size = order_benchmarks.size() * 1.1; \
       \
       ofile.open("jgr/" FILENAME); \
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
       \
       /* Loop dynamically to output correct tick labels and locations */ \
       for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
-          ofile << "  hash_label at " << (b_idx * 9.0 + 4) << " : " << order_benchmarks[b_idx] << "\n"; \
+          ofile << "  hash_label at " << (b_idx * (order_policies.size() + 1) + order_benchmarks.size() / 2) << " : " << order_benchmarks[b_idx] << "\n"; \
       } \
       ofile << "\n"; \
       ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
