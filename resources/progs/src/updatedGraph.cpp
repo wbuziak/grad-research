@@ -172,7 +172,7 @@ int main(int argc, char** argv)
                   ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 .025\n"; \
                   if (count <= 5) ofile << "  label : Encryption Only\n"; \
               } else if (p_idx == 3) { \
-                  ofile << "newcurve marktype xbar cfill 1 .5 .5\n  marksize .6 .025\n"; \
+                  ofile << "newcurve marktype xbar cfill 1 .45 .3\n  marksize .6 .025\n"; \
                   if (count <= 5) ofile << "  label : Hashing + Encryption\n"; \
               }  else if (p_idx == 4) { \
                   ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 .025\n"; \
