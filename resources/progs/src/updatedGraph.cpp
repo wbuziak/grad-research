@@ -15,11 +15,11 @@ struct Stats {
     double l1d_acc, l1d_hits, l1d_miss;
     double l2_acc, l2_hits, l2_miss;
     double req_handled, meta_acc, meta_hits, meta_miss;
-    double mem_reads; // New field for Memory Reads
+    double mem_reads, mem_writes, mem_acc; // New field for Memory Reads
 
     Stats() : cycles(0), ipc(0), insts(0), l1i_acc(0), l1i_hits(0), l1i_miss(0),
               l1d_acc(0), l1d_hits(0), l1d_miss(0), l2_acc(0), l2_hits(0), l2_miss(0),
-              req_handled(0), meta_acc(0), meta_hits(0), meta_miss(0), mem_reads(0) {}
+              req_handled(0), meta_acc(0), meta_hits(0), meta_miss(0), mem_reads(0), mem_writes(0), mem_acc(0) {}
 };
 
 vector<string> parse_line(string line) {
@@ -172,7 +172,7 @@ int main(int argc, char** argv)
                   ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 .025\n"; \
                   if (count <= 5) ofile << "  label : Encryption Only\n"; \
               } else if (p_idx == 3) { \
-                  ofile << "newcurve marktype xbar cfill 1 .45 .3\n  marksize .6 .025\n"; \
+                  ofile << "newcurve marktype xbar cfill 0 0 .54\n  marksize .6 .025\n"; \
                   if (count <= 5) ofile << "  label : Hashing + Encryption\n"; \
               }  else if (p_idx == 4) { \
                   ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 .025\n"; \
@@ -206,12 +206,14 @@ int main(int argc, char** argv)
   GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss, "No Security");
 
   // Metadata requests (Normalized to Integrity Tree)
-  GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc, "Integrity Tree");
-  GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits, "Integrity Tree");
-  GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss, "Integrity Tree");
+  GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc, "No Security");
+  GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits, "No Security");
+  GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss, "No Security");
 
   // Memory Reads graph
   GENERATE_GRAPH("mem-reads.jgr", "Memory Reads (Normalized)", mem_reads, "No Security");
+  GENERATE_GRAPH("mem-writes.jgr", "Memory Writes (Normalized)", mem_writes, "No Security");
+  GENERATE_GRAPH("mem-acc.jgr", "Memory Accesses (Normalized)", mem_acc, "No Security");
 
   // Output jgraph commands for easy copy
   printf("jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg\n");
