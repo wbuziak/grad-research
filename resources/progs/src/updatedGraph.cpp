@@ -16,10 +16,11 @@ struct Stats {
     double l2_acc, l2_hits, l2_miss;
     double req_handled, meta_acc, meta_hits, meta_miss;
     double mem_reads, mem_writes, mem_acc; 
+    double meta_hit_rate, total_accesses;
 
     Stats() : cycles(0), ipc(0), insts(0), l1i_acc(0), l1i_hits(0), l1i_miss(0),
               l1d_acc(0), l1d_hits(0), l1d_miss(0), l2_acc(0), l2_hits(0), l2_miss(0),
-              req_handled(0), meta_acc(0), meta_hits(0), meta_miss(0), mem_reads(0), mem_writes(0), mem_acc(0) {}
+              req_handled(0), meta_acc(0), meta_hits(0), meta_miss(0), mem_reads(0), mem_writes(0), mem_acc(0), meta_hit_rate(0), total_accesses(0) {}
 };
 
 vector<string> parse_line(string line) {
@@ -114,6 +115,11 @@ int main(int argc, char** argv)
         if (words.size() > 23) s.mem_reads = strtod(words[23].c_str(), NULL);
         if (words.size() > 24) s.mem_writes = strtod(words[24].c_str(), NULL);
         if (words.size() > 25) s.mem_acc = strtod(words[25].c_str(), NULL);
+
+        s.meta_hit_rate = s.meta_hits / s.meta_acc;
+        s.total_accesses = s.meta_acc + s.mem_acc;
+
+        if (s.meta_hit_rate == 1) s.meta_hit_rate = 0;
 
         data[bench][policy] = s;
     }
@@ -236,19 +242,19 @@ int main(int argc, char** argv)
               double raw_val = data[bench][policy].STAT_VAR; \
               \
               if (p_idx == 0) { \
-                  ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .6 10\n"; \
+                  ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .6 " << y_max / 50 << "\n"; \
                   if (count <= 5) ofile << "  label : No Security\n"; \
               } else if (p_idx == 1) { \
-                  ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .6 10\n"; \
+                  ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .6 " << y_max / 50 << "\n"; \
                   if (count <= 5) ofile << "  label : Hashing Only\n"; \
               } else if (p_idx == 2) { \
-                  ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 10\n"; \
+                  ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 " << y_max / 50 << "\n"; \
                   if (count <= 5) ofile << "  label : Encryption Only\n"; \
               } else if (p_idx == 3) { \
-                  ofile << "newcurve marktype xbar cfill 0 0 .54\n  marksize .6 10\n"; \
+                  ofile << "newcurve marktype xbar cfill 0 0 .54\n  marksize .6 " << y_max / 50 << "\n"; \
                   if (count <= 5) ofile << "  label : Hashing + Encryption\n"; \
               }  else if (p_idx == 4) { \
-                  ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 10\n"; \
+                  ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 " << y_max / 50 << "\n"; \
                   if (count <= 5) ofile << "  label : Full Security\n"; \
               } \
               ofile << "  pts\n  " << count << " " << raw_val << "\n\n"; \
@@ -282,37 +288,17 @@ int main(int argc, char** argv)
   GENERATE_RAW_GRAPH("meta-acc.jgr", "Metadata Accesses (Raw)", meta_acc);
   GENERATE_RAW_GRAPH("meta-hits.jgr", "Metadata Hits (Raw)", meta_hits);
   GENERATE_RAW_GRAPH("meta-miss.jgr", "Metadata Misses (Raw)", meta_miss);
+  GENERATE_RAW_GRAPH("meta-hit-rate.jgr", "Metadata Hit Rate (Raw)", meta_hit_rate);
 
   // Memory stats (RAW)
   GENERATE_RAW_GRAPH("mem-reads.jgr", "Memory Reads (Raw)", mem_reads);
   GENERATE_RAW_GRAPH("mem-writes.jgr", "Memory Writes (Raw)", mem_writes);
   GENERATE_RAW_GRAPH("mem-acc.jgr", "Memory Accesses (Raw)", mem_acc);
+  GENERATE_RAW_GRAPH("total-acc.jgr", "Total Number of Accesses (Metadata + Memory - Raw)", total_accesses);
 
   // Instructions (RAW)
   GENERATE_RAW_GRAPH("ipc.jgr", "IPC (Raw)", ipc);
   GENERATE_RAW_GRAPH("insts.jgr", "Commit Instructions (Raw)", insts);
-
-  // Output jgraph commands for easy copy
-  printf("jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg\n");
-  printf("jgraph -P jgr/ipc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/ipc.jpg\n");
-  printf("jgraph -P jgr/insts.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/insts.jpg\n");
-  printf("jgraph -P jgr/l1i-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1i-acc.jpg\n");
-  printf("jgraph -P jgr/l1i-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1i-hits.jpg\n");
-  printf("jgraph -P jgr/l1i-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1i-miss.jpg\n");
-  printf("jgraph -P jgr/l1d-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1d-acc.jpg\n");
-  printf("jgraph -P jgr/l1d-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1d-hits.jpg\n");
-  printf("jgraph -P jgr/l1d-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l1d-miss.jpg\n");
-  printf("jgraph -P jgr/l2-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-acc.jpg\n");
-  printf("jgraph -P jgr/l2-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-hits.jpg\n");
-  printf("jgraph -P jgr/l2-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-miss.jpg\n");
-  
-  printf("jgraph -P jgr/meta-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-acc.jpg\n");
-  printf("jgraph -P jgr/meta-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-hits.jpg\n");
-  printf("jgraph -P jgr/meta-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-miss.jpg\n");
-  
-  printf("jgraph -P jgr/mem-reads.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/mem-reads.jpg\n");
-  printf("jgraph -P jgr/mem-writes.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/mem-writes.jpg\n");
-  printf("jgraph -P jgr/mem-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/mem-acc.jpg\n");
 
   return 0;
 }
