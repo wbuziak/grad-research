@@ -15,7 +15,7 @@ struct Stats {
     double l1d_acc, l1d_hits, l1d_miss;
     double l2_acc, l2_hits, l2_miss;
     double req_handled, meta_acc, meta_hits, meta_miss;
-    double mem_reads, mem_writes, mem_acc; // New field for Memory Reads
+    double mem_reads, mem_writes, mem_acc; 
 
     Stats() : cycles(0), ipc(0), insts(0), l1i_acc(0), l1i_hits(0), l1i_miss(0),
               l1d_acc(0), l1d_hits(0), l1d_miss(0), l2_acc(0), l2_hits(0), l2_miss(0),
@@ -110,14 +110,18 @@ int main(int argc, char** argv)
         s.meta_hits = strtod(words[21].c_str(), NULL);
         s.meta_miss = strtod(words[22].c_str(), NULL);
 
-        // Memory Reads Parsing
-        s.mem_reads = strtod(words[23].c_str(), NULL);
+        // Memory Parsing
+        if (words.size() > 23) s.mem_reads = strtod(words[23].c_str(), NULL);
+        if (words.size() > 24) s.mem_writes = strtod(words[24].c_str(), NULL);
+        if (words.size() > 25) s.mem_acc = strtod(words[25].c_str(), NULL);
 
         data[bench][policy] = s;
     }
   }
 
-  // Helper macro to generate graphs (C++98 compliant)
+  // =========================================================================
+  // MACRO 1: NORMALIZED GRAPH GENERATOR 
+  // =========================================================================
   #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR, BASE_POLICY) \
   do { \
       /* First pass to find the maximum normalized value for y-axis scaling */ \
@@ -188,13 +192,82 @@ int main(int argc, char** argv)
       ofile.close(); \
   } while (0)
 
-  // ============= Generate All Graphs ============== //
-  // Cycles, ipc & instructions
-  GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles, "No Security");
-  GENERATE_GRAPH("ipc.jgr", "IPC (Normalized)", ipc, "No Security");
-  GENERATE_GRAPH("insts.jgr", "Commit Instructions (Normalized)", insts, "No Security");
 
-  // On-chip caches
+  // =========================================================================
+  // MACRO 2: RAW GRAPH GENERATOR (No Base Policy Normalization, No `hash .1`)
+  // =========================================================================
+  #define GENERATE_RAW_GRAPH(FILENAME, YLABEL, STAT_VAR) \
+  do { \
+      /* First pass to find the maximum RAW value for y-axis scaling */ \
+      double max_raw = 0; \
+      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+          string bench = order_benchmarks[b_idx]; \
+          for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
+              string policy = order_policies[p_idx]; \
+              double val = data[bench][policy].STAT_VAR; \
+              if (val > max_raw) max_raw = val; \
+          } \
+      } \
+      if (max_raw == 0) max_raw = 1.0; \
+      double y_max = max_raw * 1.1; /* Add 10% headroom */ \
+      \
+      double x_max = order_benchmarks.size() * (order_policies.size() + 1) + .9; \
+      double x_size = order_benchmarks.size() * 1.1; \
+      \
+      ofile.open("jgr/" FILENAME); \
+      if (!ofile.is_open()) { printf("failed to open %s\n", FILENAME); return 1; } \
+      ofile << "newgraph\n\nxaxis size " << x_size << "\n  min 0.1 max " << x_max << " mhash 0 shash 0\n  label : Benchmark\n\n"; \
+      ofile << "  no_auto_hash_labels\n"; \
+      \
+      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+          ofile << "  hash_label at " << (b_idx * (order_policies.size() + 1) + order_benchmarks.size() / 2) << " : " << order_benchmarks[b_idx] << "\n"; \
+      } \
+      ofile << "\n"; \
+      ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
+      /* NOTE: `hash .1` is intentionally removed here so Jgraph auto-calculates tick spacing for large raw values */ \
+      ofile << "yaxis min 0 max " << y_max << " size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n  mhash 0\n\n"; \
+      ofile << "legend top\n\nnewline pts .1 0 " << x_max << " 0\n\n"; \
+      \
+      count = 1; \
+      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+          string bench = order_benchmarks[b_idx]; \
+          for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
+              string policy = order_policies[p_idx]; \
+              double raw_val = data[bench][policy].STAT_VAR; \
+              \
+              if (p_idx == 0) { \
+                  ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .6 10\n"; \
+                  if (count <= 5) ofile << "  label : No Security\n"; \
+              } else if (p_idx == 1) { \
+                  ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .6 10\n"; \
+                  if (count <= 5) ofile << "  label : Hashing Only\n"; \
+              } else if (p_idx == 2) { \
+                  ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 10\n"; \
+                  if (count <= 5) ofile << "  label : Encryption Only\n"; \
+              } else if (p_idx == 3) { \
+                  ofile << "newcurve marktype xbar cfill 0 0 .54\n  marksize .6 10\n"; \
+                  if (count <= 5) ofile << "  label : Hashing + Encryption\n"; \
+              }  else if (p_idx == 4) { \
+                  ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 10\n"; \
+                  if (count <= 5) ofile << "  label : Full Security\n"; \
+              } \
+              ofile << "  pts\n  " << count << " " << raw_val << "\n\n"; \
+              count++; \
+          } \
+          /* Add the spacer blank bar */ \
+          ofile << "newcurve marktype xbar cfill 0 1 1\n  marksize .8 .025\n  pts\n  " << count << " 0\n\n"; \
+          count++; \
+      } \
+      ofile.close(); \
+  } while (0)
+
+
+  // ============= Generate All Graphs ============== //
+  
+  // Cycles, ipc & instructions (NORMALIZED)
+  GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles, "No Security");
+
+  // On-chip caches (NORMALIZED)
   GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc, "No Security");
   GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits, "No Security");
   GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss, "No Security");
@@ -205,15 +278,19 @@ int main(int argc, char** argv)
   GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits, "No Security");
   GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss, "No Security");
 
-  // Metadata requests (Normalized to Integrity Tree)
-  GENERATE_GRAPH("meta-acc.jgr", "Metadata Accesses (Normalized)", meta_acc, "No Security");
-  GENERATE_GRAPH("meta-hits.jgr", "Metadata Hits (Normalized)", meta_hits, "No Security");
-  GENERATE_GRAPH("meta-miss.jgr", "Metadata Misses (Normalized)", meta_miss, "No Security");
+  // Metadata requests (RAW)
+  GENERATE_RAW_GRAPH("meta-acc.jgr", "Metadata Accesses (Raw)", meta_acc);
+  GENERATE_RAW_GRAPH("meta-hits.jgr", "Metadata Hits (Raw)", meta_hits);
+  GENERATE_RAW_GRAPH("meta-miss.jgr", "Metadata Misses (Raw)", meta_miss);
 
-  // Memory Reads graph
-  GENERATE_GRAPH("mem-reads.jgr", "Memory Reads (Normalized)", mem_reads, "No Security");
-  GENERATE_GRAPH("mem-writes.jgr", "Memory Writes (Normalized)", mem_writes, "No Security");
-  GENERATE_GRAPH("mem-acc.jgr", "Memory Accesses (Normalized)", mem_acc, "No Security");
+  // Memory stats (RAW)
+  GENERATE_RAW_GRAPH("mem-reads.jgr", "Memory Reads (Raw)", mem_reads);
+  GENERATE_RAW_GRAPH("mem-writes.jgr", "Memory Writes (Raw)", mem_writes);
+  GENERATE_RAW_GRAPH("mem-acc.jgr", "Memory Accesses (Raw)", mem_acc);
+
+  // Instructions (RAW)
+  GENERATE_RAW_GRAPH("ipc.jgr", "IPC (Raw)", ipc);
+  GENERATE_RAW_GRAPH("insts.jgr", "Commit Instructions (Raw)", insts);
 
   // Output jgraph commands for easy copy
   printf("jgraph -P jgr/numCycles.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/numCycles.jpg\n");
@@ -228,10 +305,14 @@ int main(int argc, char** argv)
   printf("jgraph -P jgr/l2-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-acc.jpg\n");
   printf("jgraph -P jgr/l2-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-hits.jpg\n");
   printf("jgraph -P jgr/l2-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/l2-miss.jpg\n");
+  
   printf("jgraph -P jgr/meta-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-acc.jpg\n");
   printf("jgraph -P jgr/meta-hits.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-hits.jpg\n");
   printf("jgraph -P jgr/meta-miss.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/meta-miss.jpg\n");
+  
   printf("jgraph -P jgr/mem-reads.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/mem-reads.jpg\n");
+  printf("jgraph -P jgr/mem-writes.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/mem-writes.jpg\n");
+  printf("jgraph -P jgr/mem-acc.jgr | ps2pdf - | magick -density 300 - -quality 100 jpg/mem-acc.jpg\n");
 
   return 0;
 }
