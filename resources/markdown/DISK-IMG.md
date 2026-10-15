@@ -267,7 +267,11 @@ For compiling parsec onto a disk image in RISC-V:
 If you haven't already, download the disk image:
 
 ```
+wget https://dist.gem5.org/dist/develop/kernels/riscv/static/linux-6.5.5
+wget https://dist.gem5.org/dist/develop/kernels/riscv/static/riscv-bootloader-opensbi-1.3.1-20231129
+mv riscv-bootloader-opensbi-1.3.1-20241129 riscv-bootloader-opensbi-1.3.1
 wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
+gunzip riscv-ubuntu-22.04.gz
 ```
 
 Mount devices & update
