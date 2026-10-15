@@ -129,6 +129,12 @@ For riscv, to cross compile the m5 binary, this can be done from the ~/gem5/util
 scons riscv.CROSS_COMPILE=/home/wbuziak/../../opt/riscv/bin/riscv64-unknown-linux-gnu- build/riscv/out/m5
 ```
 
+Install the RISC-V GNU compiler:
+
+```
+sudo apt install g++-riscv64-linux-gnu gcc-riscv64-linux-gnu
+```
+
 You will then want to copy this binary onto your disk image sbin/ folder, as per the [disk-image](https://www.gem5.org/documentation/general_docs/fullsystem/disks) documentation.
 
 For x86
