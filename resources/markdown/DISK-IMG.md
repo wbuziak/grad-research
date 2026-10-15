@@ -286,7 +286,7 @@ It may be necessary to fix the broken symlink for the DNS:
 ```
 rm -f /etc/resolv.conf
 echo "nameserver 8.8.8.8" > /etc/resolv.conf 
-echo "127.0.1.1 iris-arm-server-3" >> /etc/hosts
+echo "127.0.1.1 $(hostname)" >> /etc/hosts
 ```
 
 Now, we should be ready to update & install dependencies:
@@ -367,7 +367,7 @@ void __parsec_roi_end() {
 Modify the hooks build configuration with the following flags:
 
 ```
-vi pkgs/libs/hooks/parsec/gcc-hooks.bldconf
+vi parsec-benchmark/pkgs/libs/hooks/parsec/gcc-hooks.bldconf
 ```
 
 ```
