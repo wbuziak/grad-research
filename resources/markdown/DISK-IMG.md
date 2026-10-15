@@ -320,6 +320,7 @@ sudo chmod +x /usr/local/bin/m5
 Now, we download the parsec benchmark:
 
 ```
+cd /home/gem5
 wget https://github.com/cirosantilli/parsec-benchmark/releases/download/3.0/parsec-3.0-core.tar.gz
 tar -xvf parsec-3.0-core.tar.gz
 rm parsec-3.0-core.tar.gz
