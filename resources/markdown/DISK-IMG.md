@@ -416,6 +416,7 @@ Finally, we compile the benchmark:
 ```
 echo 'export PARSECDIR="$(pwd)"' > /home/gem5/parsec-benchmark/env.sh
 echo 'export PATH="${PARSECDIR}/bin:${PATH}"' >> /home/gem5/parsec-benchmark/env.sh
+cd parsec-benchmark
 source env.sh
 parsecmgmt -a build -p blackscholes -c gcc-hooks
 ```
