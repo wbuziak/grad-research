@@ -210,7 +210,7 @@ RISC-V:
   ```
   - Disk Image:
   ```
-  wget https://dist.gem5.org/dist/develop/images/riscv/ubuntu-20-04/riscv-ubuntu-20221118.img.gz
+  wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
   ```
 
 # Microbenchmark
@@ -260,3 +260,150 @@ mknod /dev/mem c 1 1
 chmod 660 /dev/mem
 ```
 
+# Parsec
+
+For compiling parsec onto a disk image in RISC-V:
+
+If you haven't already, download the disk image:
+
+```
+wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
+```
+
+Mount devices & update
+
+In order to update, we first have to mount filesystems:
+
+```
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+```
+
+It may be necessary to fix the broken symlink for the DNS:
+
+```
+rm -f /etc/resolv.conf
+echo "nameserver 8.8.8.8" > /etc/resolv.conf 
+echo "127.0.1.1 iris-arm-server-3" >> /etc/hosts
+```
+
+Now, we should be ready to update & install dependencies:
+
+```
+apt-get update
+sudo apt install vim
+sudo apt install -y build-essential git scons gcc g++ autotools-dev
+```
+
+Clone gem5 in the disk image:
+
+```
+cd /home/gem5
+git clone https://github.com/gem5/gem5.git
+cd gem5/util/m5
+```
+
+Compile the m5 binary within the disk image:
+
+```
+scons riscv.CROSS_COMPILE="" build/riscv/out/m5
+```
+
+Copy the m5 binary and enable it system wide:
+
+```
+sudo cp build/riscv/out/m5 /usr/local/bin/
+sudo chmod +x /usr/local/bin/m5
+```
+
+Now, we download the parsec benchmark:
+
+```
+wget https://github.com/cirosantilli/parsec-benchmark/releases/download/3.0/parsec-3.0-core.tar.gz
+tar -xvf parsec-3.0-core.tar.gz
+rm parsec-3.0-core.tar.gz
+mv parsec-3.0 parsec-benchmark
+```
+
+We now modify the hooks to recognize gem5 exit conditions
+
+Open ```pks/libs/hooks/src/hooks.c```
+
+```
+vi parsec-benchmark/pkgs/libs/hooks/src/hooks.c
+```
+
+Add the ```#include <gem5/m5ops.h>``` header at the top:
+
+```
+#include "include/hooks.h"
+#include "config.h"
+
+#include <stdio.h>
+#include <assert.h>
+#include <gem5/m5ops.h>
+```
+
+Then, ensure that the roi_begin() & roi_end() have the appropriate m5_work instruction:
+
+```
+void __parsec_roi_begin() {
+    // Existing hook code...
+
+    /* gem5 ROI Begin Hook */
+    m5_work_begin(0, 0);
+}
+
+void __parsec_roi_end() {
+    /* gem5 ROI End Hook */
+    m5_work_end(0, 0);
+
+    // Existing hook code...
+}
+```
+
+Modify the hooks build configuration with the following flags:
+
+```
+vi pkgs/libs/hooks/parsec/gcc-hooks.bldconf
+```
+
+```
+#!/bin/bash
+
+# gcc-hooks.bldconf - configuration file for PARSEC
+
+source ${PARSECDIR}/pkgs/libs/hooks/parsec/gcc.bldconf
+
+# Path to gem5 root inside the guest image
+GEM5_DIR="/home/gem5/gem5"
+
+# Append include and library paths
+INCPATH="${INCPATH} -I${GEM5_DIR}/include"
+LIBPATH="${LIBPATH} -L${GEM5_DIR}/util/m5/build/riscv/out"
+LIBS="${LIBS} -lm5"
+```
+
+Update the config files to avoid future errors:
+
+```
+find /home/gem5/parsec-benchmark -type f -name "config.guess" -exec cp /usr/share/misc/config.guess {} \;
+find /home/gem5/parsec-benchmark -type f -name "config.sub" -exec cp /usr/share/misc/config.sub {} \;
+```
+
+Now, we compile the benchmark:
+
+```
+echo 'export PARSECDIR="$(pwd)"' > /home/gem5/parsec-benchmark/env.sh
+echo 'export PATH="${PARSECDIR}/bin:${PATH}"' >> /home/gem5/parsec-benchmark/env.sh
+source env.sh
+parsecmgmt -a build -p blackscholes -c gcc-hooks
+```
+
+Alternatively, you can compile all benchmarks:
+
+```
+parsecmgmt -a build -p all -c gcc-hooks
+```
