@@ -293,8 +293,7 @@ Now, we should be ready to update & install dependencies:
 
 ```
 apt-get update
-sudo apt install vim
-sudo apt install -y build-essential git scons gcc g++ autotools-dev
+sudo apt install -y vim m4 build-essential git scons gcc g++ autotools-dev
 ```
 
 Clone gem5 in the disk image:
@@ -393,7 +392,21 @@ find /home/gem5/parsec-benchmark -type f -name "config.guess" -exec cp /usr/shar
 find /home/gem5/parsec-benchmark -type f -name "config.sub" -exec cp /usr/share/misc/config.sub {} \;
 ```
 
-Now, we compile the benchmark:
+Replace hardcoded x86 flags with riscv flags:
+
+```
+sed -i 's|-DM5OP_ADDR=0xFFFF0000 -DM5OP_PIC -Iinclude|-I/home/gem5/gem5/include|g' /home/gem5/parsec-benchmark/pkgs/libs/hooks/src/Makefile.shared
+sed -i 's/OBJS = hooks.lo$/OBJS = hooks.lo m5op_x86.lo/g' /home/gem5/parsec-benchmark/pkgs/libs/hooks/src/Makefile.shared
+```
+
+Then, update the build configurations:
+
+```
+echo 'LDFLAGS="${LDFLAGS} -L/home/gem5/gem5/util/m5/build/riscv/out"' >> /home/gem5/parsec-benchmark/config/gcc-hooks.bldconf
+echo 'LIBS="${LIBS} -lm5"' >> /home/gem5/parsec-benchmark/config/gcc-hooks.bldconf
+```
+
+Finally, we compile the benchmark:
 
 ```
 echo 'export PARSECDIR="$(pwd)"' > /home/gem5/parsec-benchmark/env.sh
