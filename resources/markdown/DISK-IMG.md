@@ -14,42 +14,58 @@ Note: If you are starting from scratch, you can largely follow the setup and the
 
  - If you need additional help, there are random notes and commands down at the bottom
 
-# Binaries
+# Compiling gem5
 
-In order to successfully simulate a full-system architecture, you must have compatible OS, bootloader and kernel binaries. Many can be found at the [gem5 resources]() repository.
+First, download all required binaries
 
-X86:
+```
+wget https://dist.gem5.org/dist/develop/kernels/riscv/static/linux-6.5.5
+wget https://dist.gem5.org/dist/develop/kernels/riscv/static/riscv-bootloader-opensbi-1.3.1-20231129
+mv riscv-bootloader-opensbi-1.3.1-20231129 riscv-bootloader-opensbi-1.3.1
+wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
+gunzip riscv-ubuntu-22.04.gz
+```
 
-  - Parsec:
- ```
- wget https://gem5dist.blob.core.windows.net/dist/develop/images/x86/ubuntu-18-04/parsec.img.gz
- ```
- - linux kernel:
- ```
- wget https://gem5dist.blob.core.windows.net/dist/develop/kernels/x86/static/vmlinux-5.2.3
- ```
+Mount the disk image (spam until it works - seriously):
+```
+sudo python3 util/gem5img.py mount fs_files/riscv-ubuntu-22.04 mnt
+```
 
-- Disk Image: (standard ubuntu disk image)
- ```
- wget https://dist.gem5.org/dist/develop/images/x86/x86-ubuntu-22-04.gz
- ```
+Chroot into the disk image, mount devices and begin installing
 
+```
+sudo chroot mnt /bin/bash
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+```
 
-RISC-V:
+May be necessary to fix broken symlink for DNS:
 
-  - Bootloader:
-  ```
-  wget https://dist.gem5.org/dist/develop/kernels/riscv/static/riscv-bootloader-opensbi-1.3.1-20231129
-  ```
-  - Kernel:
-  ```
-  wget https://dist.gem5.org/dist/develop/kernels/riscv/static/linux-6.5.5
-  ```
-  - Disk Image:
-  ```
-  wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
-  ```
+```
+rm -f /etc/resolv.conf
+echo "nameserver 8.8.8.8" > /etc/resolv.conf 
+echo "127.0.1.1 $(hostname)" >> /etc/hosts
+```
 
+Install necessary dependents and download gem5
+
+```
+apt-get update
+sudo apt install -y vim m4 build-essential git scons gcc g++ autotools-dev
+cd /home/gem5
+git clone https://github.com/gem5/gem5.git
+cd gem5/util/m5
+```
+
+Cross-compile m5 & make visible system-wide:
+
+```
+scons riscv.CROSS_COMPILE="" build/riscv/out/m5
+sudo cp build/riscv/out/m5 /usr/local/bin/
+sudo chmod +x /usr/local/bin/m5
+```
 
 # SPEC CPU 2026
 
@@ -373,61 +389,44 @@ mknod /dev/mem c 1 1
 chmod 660 /dev/mem
 ```
 
-# Compiling gem5
-
-First, download all required binaries
-
-```
-wget https://dist.gem5.org/dist/develop/kernels/riscv/static/linux-6.5.5
-wget https://dist.gem5.org/dist/develop/kernels/riscv/static/riscv-bootloader-opensbi-1.3.1-20231129
-mv riscv-bootloader-opensbi-1.3.1-20231129 riscv-bootloader-opensbi-1.3.1
-wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
-gunzip riscv-ubuntu-22.04.gz
-```
-
-Mount the disk image (spam until it works - seriously):
-```
-sudo python3 util/gem5img.py mount fs_files/riscv-ubuntu-22.04 mnt
-```
-
-Chroot into the disk image, mount devices and begin installing
-
-```
-sudo chroot mnt /bin/bash
-mount -t proc proc /proc
-mount -t sysfs sys /sys
-mkdir -p /dev/pts
-mount -t devpts devpts /dev/pts
-```
-
-May be necessary to fix broken symlink for DNS:
-
-```
-rm -f /etc/resolv.conf
-echo "nameserver 8.8.8.8" > /etc/resolv.conf 
-echo "127.0.1.1 $(hostname)" >> /etc/hosts
-```
-
-Install necessary dependents and download gem5
-
-```
-apt-get update
-sudo apt install -y vim m4 build-essential git scons gcc g++ autotools-dev
-cd /home/gem5
-git clone https://github.com/gem5/gem5.git
-cd gem5/util/m5
-```
-
-Cross-compile m5 & make visible system-wide:
-
-```
-scons riscv.CROSS_COMPILE="" build/riscv/out/m5
-sudo cp build/riscv/out/m5 /usr/local/bin/
-sudo chmod +x /usr/local/bin/m5
-```
-
-
 ## Extra Notes
+
+# Binaries
+
+In order to successfully simulate a full-system architecture, you must have compatible OS, bootloader and kernel binaries. Many can be found at the [gem5 resources]() repository.
+
+X86:
+
+  - Parsec:
+ ```
+ wget https://gem5dist.blob.core.windows.net/dist/develop/images/x86/ubuntu-18-04/parsec.img.gz
+ ```
+ - linux kernel:
+ ```
+ wget https://gem5dist.blob.core.windows.net/dist/develop/kernels/x86/static/vmlinux-5.2.3
+ ```
+
+- Disk Image: (standard ubuntu disk image)
+ ```
+ wget https://dist.gem5.org/dist/develop/images/x86/x86-ubuntu-22-04.gz
+ ```
+
+
+RISC-V:
+
+  - Bootloader:
+  ```
+  wget https://dist.gem5.org/dist/develop/kernels/riscv/static/riscv-bootloader-opensbi-1.3.1-20231129
+  ```
+  - Kernel:
+  ```
+  wget https://dist.gem5.org/dist/develop/kernels/riscv/static/linux-6.5.5
+  ```
+  - Disk Image:
+  ```
+  wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
+  ```
+
 
 ```
 mkdir mnt
