@@ -28,6 +28,18 @@ gzip -d riscv-ubuntu-22.04.gz
 sudo python3 util/gem5img.py mount resources/binaries/riscv-ubuntu-22.04 mnt
 ```
 
+To check loop devices:
+
+```
+losetup -a
+```
+
+Clear any un-wanted loop devices:
+```
+sudo umount -R mnt 2>/dev/null
+sudo losetup -D
+```
+
 If you experience the following error message:
 
 ```
@@ -266,11 +278,9 @@ mknod /dev/mem c 1 1
 chmod 660 /dev/mem
 ```
 
-# Parsec
+# Compiling gem5
 
-For compiling parsec onto a disk image in RISC-V:
-
-If you haven't already, download the disk image:
+First, download all required binaries
 
 ```
 wget https://dist.gem5.org/dist/develop/kernels/riscv/static/linux-6.5.5
@@ -280,18 +290,22 @@ wget https://dist.gem5.org/dist/develop/images/riscv/riscv-ubuntu-22.04.gz
 gunzip riscv-ubuntu-22.04.gz
 ```
 
-Mount devices & update
+Mount the disk image (spam until it works - seriously):
+```
+sudo python3 util/gem5img.py mount fs_files/riscv-ubuntu-22.04 mnt
+```
 
-In order to update, we first have to mount filesystems:
+Chroot into the disk image, mount devices and begin installing
 
 ```
+sudo chroot mnt /bin/bash
 mount -t proc proc /proc
 mount -t sysfs sys /sys
 mkdir -p /dev/pts
 mount -t devpts devpts /dev/pts
 ```
 
-It may be necessary to fix the broken symlink for the DNS:
+May be necessary to fix broken symlink for DNS:
 
 ```
 rm -f /etc/resolv.conf
@@ -299,35 +313,194 @@ echo "nameserver 8.8.8.8" > /etc/resolv.conf
 echo "127.0.1.1 $(hostname)" >> /etc/hosts
 ```
 
-Now, we should be ready to update & install dependencies:
+Install necessary dependents and download gem5
 
 ```
 apt-get update
 sudo apt install -y vim m4 build-essential git scons gcc g++ autotools-dev
-```
-
-Clone gem5 in the disk image:
-
-```
 cd /home/gem5
 git clone https://github.com/gem5/gem5.git
 cd gem5/util/m5
 ```
 
-Compile the m5 binary within the disk image:
+Cross-compile m5 & make visible system-wide:
 
 ```
 scons riscv.CROSS_COMPILE="" build/riscv/out/m5
-```
-
-Copy the m5 binary and enable it system wide:
-
-```
 sudo cp build/riscv/out/m5 /usr/local/bin/
 sudo chmod +x /usr/local/bin/m5
 ```
 
-Now, we download the parsec benchmark:
+# SPEC CPU 2026
+
+This begins with the assumption that you have a SPEC binary / license downloaded on the host machine you wish to set up your disk image and run gem5.
+
+We will need 7zip for unpacking the ISO:
+
+```
+sudo apt-get install -y p7zip-full
+```
+
+Before we configure, we need to reformat the disk image for more space:
+
+```
+qemu-img resize riscv-ubuntu-22.04 +30G
+```
+
+Mount the image to a loop device to repartition the disk:
+
+```
+sudo losetup -Pf /home/wbuziak/repos/gem5/fs_files/riscv-ubuntu-22.04
+```
+
+Check what device it has been attached to:
+
+```
+losetup -a
+```
+
+Resize the partitions (assuming loop0):
+
+```
+sudo parted /dev/loop0 resizepart 1 100%
+sudo partprobe /dev/loop0
+sudo e2fsck -f /dev/loop0
+sudo resize2fs /dev/loop0
+```
+
+Cleanup the loop device:
+
+```
+sudo losetup -d /dev/loop0
+```
+
+Copy the qemu binary into the mounted mnt folder:
+
+```
+sudo cp /usr/bin/qemu-riscv64-static mnt/usr/bin/
+```
+
+Mount the image and create another mount point for the SPEC ISO
+
+```
+sudo python3 util/gem5img.py mount fs_files/riscv-ubuntu-22.04 mnt
+```
+
+Copy over the SPEC installation scripts:
+
+```
+mkdir -p /tmp/spec_iso
+sudo 7z x fs_files/cpu2026-1.0.1.iso -o./mnt/tmp/spec_iso
+```
+
+Chroot into the image and run the SPEC installation script:
+
+```
+sudo chroot mnt /bin/bash
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+
+cd /tmp/spec_iso
+chmod -R +x .
+./install.sh -d /home/gem5/spec
+```
+
+Now, we move on to establishing gem5 hooks:
+
+Within the desired benchmark's src directory:
+
+```
+cd benchspec/CPU/782.lbm_r/src
+vi main.c
+```
+
+Add the gem5 header:
+
+```
+#include <gem5/m5ops.h>
+```
+
+Then, add the m5 exit function calls like so:
+
+```
+/* --- AFTER EDITING --- */
+/* Mark Start of Region of Interest (ROI) */
+m5_work_begin(0, 0);
+
+/* Perform time steps */
+for (n = 0; n < nTimeSteps; n++) {
+    LBM_performStreamCollide(&grid);
+}
+
+/* Mark End of Region of Interest (ROI) */
+m5_work_end(0, 0);
+
+/* Terminate gem5 simulation cleanly */
+m5_exit(0);
+```
+
+Add a config file at ```/home/gem5/spec/config/riscv64.cfg```:
+
+```
+cat << 'EOF' > /home/gem5/spec/config/riscv64.cfg
+# Global Settings
+strict_rundir_verify = 0
+check_md5            = 0
+ignore_errors        = 1
+tune                 = base
+label                = riscv64
+reportable           = no
+
+# GCC config for RISC-V 64-bit with gem5 m5ops support
+default:
+CC                  = gcc -std=c99
+CXX                 = g++ -std=c++11
+FC                  = gfortran
+
+CC_VERSION_OPTION   = --version
+CXX_VERSION_OPTION  = --version
+FC_VERSION_OPTION   = --version
+
+# Base Optimization
+OPTIMIZE            = -O2
+
+# ---------------------------------------------------------
+# gem5 m5ops Injection Flags
+# ---------------------------------------------------------
+# Ensure the compiler can find <gem5/m5ops.h>
+EXTRA_CFLAGS        = -I/home/gem5/gem5/include
+EXTRA_CXXFLAGS      = -I/home/gem5/gem5/include
+EXTRA_FFLAGS        = -I/home/gem5/gem5/include
+
+# Ensure the linker can find and link libm5.a
+EXTRA_LDFLAGS       = -L/home/gem5/gem5/util/m5/build/riscv/out
+EXTRA_LIBS          = -lm5
+EOF
+```
+
+Finally, we can build and verify:
+
+```
+cd /home/gem5/spec
+source shrc
+runcpu --config=riscv64.cfg --action=setup --size=ref --noreport -I 782.lbm_r
+```
+
+```
+cd benchspec/CPU/782.lbm_r/run/run*
+nm lbm_r* | grep m5_
+```
+
+Ensure that you see the T m5_work_ function symbols on output, if so, you should be ready to run from gem5.
+
+# Parsec
+
+This is not working as of Oct 17 2026:
+ - The issue is that the gem5 hooks will not activate when running inside gem5, due to issues with the hooks and parsecmgmt. 
+
+Download the parsec benchmark:
 
 ```
 cd /home/gem5
