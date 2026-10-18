@@ -16,7 +16,11 @@ Note: If you are starting from scratch, you can largely follow the setup and the
 
 # Compiling gem5
 
-First, download all required binaries
+First, download all required binaries to a dedicated folder:
+
+```
+mkdir fs_files
+```
 
 ```
 wget https://dist.gem5.org/dist/develop/kernels/riscv/static/linux-6.5.5
