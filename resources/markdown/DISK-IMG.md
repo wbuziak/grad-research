@@ -60,12 +60,12 @@ apt-get update
 sudo apt install -y vim m4 build-essential git scons gcc g++ autotools-dev
 cd /home/gem5
 git clone https://github.com/gem5/gem5.git
-cd gem5/util/m5
 ```
 
 Cross-compile m5 & make visible system-wide:
 
 ```
+cd gem5/util/m5
 scons riscv.CROSS_COMPILE="" build/riscv/out/m5
 sudo cp build/riscv/out/m5 /usr/local/bin/
 sudo chmod +x /usr/local/bin/m5
@@ -78,8 +78,18 @@ This begins with the assumption that you have a SPEC binary / license downloaded
 We will need 7zip for unpacking the ISO:
 
 ```
-sudo apt-get install -y p7zip-full
+sudo apt-get install -y p7zip-full qemu-utils
 ```
+
+Ensure the image is unmounted:
+
+```
+sudo umount -l mnt
+sudo losetup -D
+losetup -a
+```
+
+There should be no output from ```losetup -a```.
 
 Before we configure, we need to reformat the disk image for more space:
 
@@ -87,30 +97,36 @@ Before we configure, we need to reformat the disk image for more space:
 qemu-img resize riscv-ubuntu-22.04 +30G
 ```
 
-Mount the image to a loop device to repartition the disk:
+Sometimes there are errors on this next part, I unfortunately recommend using an AI chatbot, they are actually good are deciphering these errors.
+
+Add some extra space:
 
 ```
-sudo losetup -Pf /home/wbuziak/repos/gem5/fs_files/riscv-ubuntu-22.04
+truncate -s +100M fs_files/riscv-ubuntu-22.04
 ```
 
-Check what device it has been attached to:
+Attach image with partition scanning:
 
 ```
-losetup -a
+sudo losetup -P /dev/loop0 fs_files/riscv-ubuntu-22.04
 ```
 
-Resize the partitions (assuming loop0):
+Expand partition 1 across the new file boundary:
 
 ```
 sudo parted /dev/loop0 resizepart 1 100%
-sudo partprobe /dev/loop0
-sudo e2fsck -f /dev/loop0
-sudo resize2fs /dev/loop0
 ```
 
-Cleanup the loop device:
+Repair the filesystem: This command is especially error-prone.
 
 ```
+sudo e2fsck -fy /dev/loop0p1
+```
+
+Finally, resize EXT4 to full capacity & free up the loop device:
+
+```
+sudo resize2fs /dev/loop0p1
 sudo losetup -d /dev/loop0
 ```
 
@@ -558,7 +574,7 @@ Connect with a terminal:
 ## For gem5
 For riscv, to cross compile the m5 binary, this can be done from the ~/gem5/util/m5 directory in a similar manner to how you build the gem5 binary.
 ```
-scons riscv.CROSS_COMPILE=/home/wbuziak/../../opt/riscv/bin/riscv64-unknown-linux-gnu- build/riscv/out/m5
+scons riscv.CROSS_COMPILE=/usr/bin/riscv64-linux-gnu- build/riscv/out/m5
 ```
 
 Install the RISC-V GNU compiler:
