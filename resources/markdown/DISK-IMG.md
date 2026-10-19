@@ -39,11 +39,15 @@ Chroot into the disk image, mount devices and begin installing
 
 ```
 sudo chroot mnt /bin/bash
+```
+
+```
 mount -t proc proc /proc
 mount -t sysfs sys /sys
 mkdir -p /dev/pts
 mount -t devpts devpts /dev/pts
 ```
+
 
 May be necessary to fix broken symlink for DNS:
 
@@ -94,7 +98,7 @@ There should be no output from ```losetup -a```.
 Before we configure, we need to reformat the disk image for more space:
 
 ```
-qemu-img resize riscv-ubuntu-22.04 +30G
+qemu-img resize fs_files/riscv-ubuntu-22.04 +30G
 ```
 
 Sometimes there are errors on this next part, I unfortunately recommend using an AI chatbot, they are actually good are deciphering these errors.
@@ -130,19 +134,20 @@ sudo resize2fs /dev/loop0p1
 sudo losetup -d /dev/loop0
 ```
 
+Mount the image:
+
+```
+sudo python3 util/gem5img.py mount fs_files/riscv-ubuntu-22.04 mnt
+```
+
 Copy the qemu binary into the mounted mnt folder:
 
 ```
 sudo cp /usr/bin/qemu-riscv64-static mnt/usr/bin/
 ```
 
-Mount the image and create another mount point for the SPEC ISO
+Copy over the SPEC installation scripts & create another mount point for the SPEC ISO:
 
-```
-sudo python3 util/gem5img.py mount fs_files/riscv-ubuntu-22.04 mnt
-```
-
-Copy over the SPEC installation scripts:
 
 ```
 mkdir -p /tmp/spec_iso
