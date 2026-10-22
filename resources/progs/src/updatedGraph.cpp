@@ -45,10 +45,13 @@ int main(int argc, char** argv)
   vector<string> order_benchmarks;
   //order_benchmarks.push_back("Blackscholes");
   //order_benchmarks.push_back("Fluidanimate");
-  order_benchmarks.push_back("Bodytrack");
-  order_benchmarks.push_back("Canneal");
-  order_benchmarks.push_back("Dedup");
-  order_benchmarks.push_back("Streamcluster");
+
+  order_benchmarks.push_back("lbm");
+  order_benchmarks.push_back("sqlite");
+  order_benchmarks.push_back("zstd");
+  order_benchmarks.push_back("cpython");
+  order_benchmarks.push_back("xz");
+  order_benchmarks.push_back("nab");
   order_benchmarks.push_back("Microbenchmark");
 
   vector<string> order_policies;
