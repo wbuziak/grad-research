@@ -165,8 +165,16 @@ int main(int argc, char** argv) {
           mem_reads = atoi(subs.c_str());
           mem_accesses += atoi(subs.c_str());
         }
+        else if (prev == "board.memory.mem_ctrl.dram.numReads::total") {
+          mem_reads = atoi(subs.c_str());
+          mem_accesses += atoi(subs.c_str());
+        }
         if (prev == "board.memory.mem_ctrl0.dram.numWrites::total") {
           //printf("%s,     %s\n", prev.c_str(), subs.c_str()); 
+          mem_writes = atoi(subs.c_str());
+          mem_accesses += atoi(subs.c_str());
+        }
+        else if (prev == "board.memory.mem_ctrl.dram.numWrites::total") {
           mem_writes = atoi(subs.c_str());
           mem_accesses += atoi(subs.c_str());
         }
