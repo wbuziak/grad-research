@@ -261,6 +261,12 @@ Ensure that you see the T m5_work_ function symbols on output, if so, you should
 This is not working as of Oct 17 2026:
  - The issue is that the gem5 hooks will not activate when running inside gem5, due to issues with the hooks and parsecmgmt. 
 
+Install dependencies:
+
+```
+sudo apt install autotools-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+```
+
 Download the parsec benchmark:
 
 ```
@@ -311,23 +317,46 @@ void __parsec_roi_end() {
 Modify the hooks build configuration with the following flags:
 
 ```
-vi parsec-benchmark/pkgs/libs/hooks/parsec/gcc-hooks.bldconf
+cp pkgs/libs/hooks/parsec/gcc-hooks.bldconf pkgs/libs/hooks/parsec/riscv-hooks.bldconf
+vi pkgs/libs/hooks/parsec/riscv-hooks.bldconf
 ```
 
 ```
 #!/bin/bash
+#
+# gcc-hooks.bldconf - file containing global information necessary to build
+#                     PARSEC with hooks API
+#
+# Copyright (C) 2006-2007 Princeton University
+# Written by Christian Bienia
 
-# gcc-hooks.bldconf - configuration file for PARSEC
+source ${PARSECDIR}/config/gcc.bldconf
 
-source ${PARSECDIR}/pkgs/libs/hooks/parsec/gcc.bldconf
+# Enable PARSEC hooks
+CFLAGS="${CFLAGS} -DENABLE_PARSEC_HOOKS -I${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}/include"
+CXXFLAGS="${CXXFLAGS} -DENABLE_PARSEC_HOOKS -I${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}/include"
+LDFLAGS="${LDFLAGS} -L${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}/lib"
+LIBS="${LIBS} -lhooks"
 
-# Path to gem5 root inside the guest image
-GEM5_DIR="/home/gem5/gem5"
+# Force RISC-V Cross-Compiler
+export CC="riscv64-linux-gnu-gcc"
+export CXX="riscv64-linux-gnu-g++"
+export CPP="riscv64-linux-gnu-cpp"
+export CXXCPP="riscv64-linux-gnu-cpp"
 
-# Append include and library paths
-INCPATH="${INCPATH} -I${GEM5_DIR}/include"
-LIBPATH="${LIBPATH} -L${GEM5_DIR}/util/m5/build/riscv/out"
-LIBS="${LIBS} -lm5"
+# Inject gem5 hooks headers and libraries
+export GEM5_DIR="/home/wbuziak/repos/gem5"
+export CFLAGS="${CFLAGS} -I${GEM5_DIR}/include"
+export CXXFLAGS="${CXXFLAGS} -I${GEM5_DIR}/include"
+export LDFLAGS="${LDFLAGS} -L${GEM5_DIR}/util/m5/build/riscv/out"
+export LIBS="${LIBS} -lm5"
+
+# Add directory with hooks library to library search path
+if [ -z "${LD_LIBRARY_PATH}" ]; then
+  export LD_LIBRARY_PATH="${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}/lib"
+else
+  export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}/lib"
+fi
 ```
 
 Update the config files to avoid future errors:
@@ -337,20 +366,6 @@ find /home/gem5/parsec-benchmark -type f -name "config.guess" -exec cp /usr/shar
 find /home/gem5/parsec-benchmark -type f -name "config.sub" -exec cp /usr/share/misc/config.sub {} \;
 ```
 
-Replace hardcoded x86 flags with riscv flags:
-
-```
-sed -i 's|-DM5OP_ADDR=0xFFFF0000 -DM5OP_PIC -Iinclude|-I/home/gem5/gem5/include|g' /home/gem5/parsec-benchmark/pkgs/libs/hooks/src/Makefile.shared
-sed -i 's/OBJS = hooks.lo$/OBJS = hooks.lo m5op_x86.lo/g' /home/gem5/parsec-benchmark/pkgs/libs/hooks/src/Makefile.shared
-```
-
-Then, update the build configurations:
-
-```
-echo 'LDFLAGS="${LDFLAGS} -L/home/gem5/gem5/util/m5/build/riscv/out"' >> /home/gem5/parsec-benchmark/config/gcc-hooks.bldconf
-echo 'LIBS="${LIBS} -lm5"' >> /home/gem5/parsec-benchmark/config/gcc-hooks.bldconf
-```
-
 Finally, we compile the benchmark:
 
 ```
@@ -358,13 +373,13 @@ echo 'export PARSECDIR="$(pwd)"' > /home/gem5/parsec-benchmark/env.sh
 echo 'export PATH="${PARSECDIR}/bin:${PATH}"' >> /home/gem5/parsec-benchmark/env.sh
 cd parsec-benchmark
 source env.sh
-parsecmgmt -a build -p blackscholes -c gcc-hooks
-```
-
-Alternatively, you can compile all benchmarks:
-
-```
 parsecmgmt -a build -p all -c gcc-hooks
+```
+
+Alternatively, you can compile a specific benchmark:
+
+```
+parsecmgmt -a build -p <benchmark> -c gcc-hooks
 ```
 
 # Microbenchmark
