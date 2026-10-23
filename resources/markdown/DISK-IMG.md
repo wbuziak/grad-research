@@ -270,56 +270,21 @@ sudo apt install autotools-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
 Download the parsec benchmark:
 
 ```
-cd /home/gem5
 wget https://github.com/cirosantilli/parsec-benchmark/releases/download/3.0/parsec-3.0-core.tar.gz
 tar -xvf parsec-3.0-core.tar.gz
 rm parsec-3.0-core.tar.gz
 mv parsec-3.0 parsec-benchmark
 ```
 
-We now modify the hooks to recognize gem5 exit conditions
-
-Open ```pks/libs/hooks/src/hooks.c```
+Copy gcc-hooks.bldconf to riscv-hooks.bldconf
 
 ```
-vi parsec-benchmark/pkgs/libs/hooks/src/hooks.c
+cp ./config/gcc-hooks.bldconf ./config/riscv-hooks.bldconf
+cp ./pkgs/libs/hooks/parsec/gcc-hooks.bldconf ./pkgs/libs/hooks/parsec/riscv-hooks.bldconf
+find . -name "gcc-hooks.bldconf" -exec bash -c 'cp "$1" "${1/gcc-hooks/riscv-hooks}"' _ {} \;
 ```
 
-Add the ```#include <gem5/m5ops.h>``` header at the top:
-
-```
-#include "include/hooks.h"
-#include "config.h"
-
-#include <stdio.h>
-#include <assert.h>
-#include <gem5/m5ops.h>
-```
-
-Then, ensure that the roi_begin() & roi_end() have the appropriate m5_work instruction:
-
-```
-void __parsec_roi_begin() {
-    // Existing hook code...
-
-    /* gem5 ROI Begin Hook */
-    m5_work_begin(0, 0);
-}
-
-void __parsec_roi_end() {
-    /* gem5 ROI End Hook */
-    m5_work_end(0, 0);
-
-    // Existing hook code...
-}
-```
-
-Modify the hooks build configuration with the following flags:
-
-```
-cp pkgs/libs/hooks/parsec/gcc-hooks.bldconf pkgs/libs/hooks/parsec/riscv-hooks.bldconf
-vi pkgs/libs/hooks/parsec/riscv-hooks.bldconf
-```
+Open config/riscv-hooks.bldconf and replace with this:
 
 ```
 #!/bin/bash
@@ -359,21 +324,63 @@ else
 fi
 ```
 
+Now, we copy all gcc-hooks.bldconf files for all benchmarks:
+
+```
+find . -name "gcc-hooks.bldconf" -exec bash -c 'cp "$1" "${1/gcc-hooks/riscv-hooks}"' _ {} \;
+```
+
 Update the config files to avoid future errors:
 
 ```
-find /home/gem5/parsec-benchmark -type f -name "config.guess" -exec cp /usr/share/misc/config.guess {} \;
-find /home/gem5/parsec-benchmark -type f -name "config.sub" -exec cp /usr/share/misc/config.sub {} \;
+find . -type f -name "config.guess" -exec cp /usr/share/misc/config.guess {} \;
+find . -type f -name "config.sub" -exec cp /usr/share/misc/config.sub {} \;
+sed -i 's/configure --prefix/configure --build=aarch64-linux-gnu --host=riscv64-linux-gnu --prefix/g' bin/parsecmgmt
+```
+
+Open ```pks/libs/hooks/src/hooks.c```
+
+```
+vi parsec-benchmark/pkgs/libs/hooks/src/hooks.c
+```
+
+Add the ```#include <gem5/m5ops.h>``` header at the top:
+
+```
+#include "include/hooks.h"
+#include "config.h"
+
+#include <stdio.h>
+#include <assert.h>
+#include <gem5/m5ops.h>
+```
+
+Then, ensure that the roi_begin() & roi_end() have the appropriate m5_work instruction:
+
+```
+void __parsec_roi_begin() {
+    // Existing hook code...
+
+    /* gem5 ROI Begin Hook */
+    m5_work_begin(0, 0);
+}
+
+void __parsec_roi_end() {
+    /* gem5 ROI End Hook */
+    m5_work_end(0, 0);
+
+    // Existing hook code...
+}
 ```
 
 Finally, we compile the benchmark:
 
 ```
-echo 'export PARSECDIR="$(pwd)"' > /home/gem5/parsec-benchmark/env.sh
-echo 'export PATH="${PARSECDIR}/bin:${PATH}"' >> /home/gem5/parsec-benchmark/env.sh
-cd parsec-benchmark
+echo 'export PARSECDIR="$(pwd)"' > /home/wbuziak/repos/gem5/parsec-benchmark/env.sh
+echo 'export PATH="${PARSECDIR}/bin:${PATH}"' >> /home/wbuziak/repos/gem5/parsec-benchmark/env.sh
 source env.sh
-parsecmgmt -a build -p all -c gcc-hooks
+parsecmgmt -a clean -p all -c riscv-hooks
+parsecmgmt -a build -p all -c riscv-hooks
 ```
 
 Alternatively, you can compile a specific benchmark:
