@@ -302,14 +302,6 @@ CFLAGS="${CFLAGS} -DENABLE_PARSEC_HOOKS -I${PARSECDIR}/pkgs/libs/hooks/inst/${PA
 CXXFLAGS="${CXXFLAGS} -DENABLE_PARSEC_HOOKS -I${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}/include"
 LDFLAGS="${LDFLAGS} -L${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}/lib"
 LIBS="${LIBS} -lhooks"
-
-# Force RISC-V Cross-Compiler
-export CC="riscv64-linux-gnu-gcc"
-export CXX="riscv64-linux-gnu-g++"
-export CPP="riscv64-linux-gnu-cpp"
-export CXXCPP="riscv64-linux-gnu-cpp"
-
-# Inject gem5 hooks headers and libraries
 export GEM5_DIR="/home/wbuziak/repos/gem5"
 export CFLAGS="${CFLAGS} -I${GEM5_DIR}/include"
 export CXXFLAGS="${CXXFLAGS} -I${GEM5_DIR}/include"
@@ -322,6 +314,7 @@ if [ -z "${LD_LIBRARY_PATH}" ]; then
 else
   export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${PARSECDIR}/pkgs/libs/hooks/inst/${PARSECPLAT}/lib"
 fi
+
 ```
 
 Now, we copy all gcc-hooks.bldconf files for all benchmarks:
