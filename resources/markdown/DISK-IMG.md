@@ -10,6 +10,7 @@ This documentation is adapted from the gem5 disk image [documentation](https://w
 
 ```
 sudo apt install qemu-user-static binfmt-support
+sudo apt install g++-riscv64-linux-gnu gcc-riscv64-linux-gnu
 ```
 
 ## Setup env
@@ -262,8 +263,7 @@ Ensure that you see the T m5_work_ function symbols on output, if so, you should
 
 # Parsec
 
-This is not working as of Oct 17 2026:
- - The issue is that the gem5 hooks will not activate when running inside gem5, due to issues with the hooks and parsecmgmt. 
+This is not a one-to-one guide for every benchmark, I struggled with compiling each one and recommend to compile a benchmark and copy the binary instead of trying to re-compile each benchmark.
 
 Install dependencies:
 
