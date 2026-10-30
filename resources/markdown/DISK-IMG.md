@@ -8,6 +8,10 @@ This documentation is adapted from the gem5 disk image [documentation](https://w
  - A statically compiled version of [RISC-V qemu](https://risc-v-getting-started-guide.readthedocs.io/en/latest/linux-qemu.html)
  - [RISC-V Toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
 
+```
+sudo apt install qemu-user-static binfmt-support
+```
+
 ## Setup env
 
 Note: If you are starting from scratch, you can largely follow the setup and then scroll further to your desired benchmark.
@@ -374,6 +378,19 @@ echo 'export PATH="${PARSECDIR}/bin:${PATH}"' >> /home/wbuziak/repos/gem5/parsec
 source env.sh
 parsecmgmt -a clean -p all -c riscv-hooks
 parsecmgmt -a build -p all -c riscv-hooks
+```
+
+-- Canneal build configuration:
+
+```
+cat << 'EOF' > pkgs/kernels/canneal/parsec/riscv-hooks.bldconf
+#!/bin/bash
+source ${PARSECDIR}/pkgs/kernels/canneal/parsec/gcc.bldconf
+source ${PARSECDIR}/pkgs/libs/hooks/parsec/riscv-hooks.bldconf
+
+# Override build_env to force the RISC-V cross-compiler and gem5 flags
+export build_env="CC=\"${CC}\" CXX=\"${CXX}\" CFLAGS=\"${CFLAGS}\" CXXFLAGS=\"${CXXFLAGS}\" LDFLAGS=\"${LDFLAGS}\" LIBS=\"${LIBS}\""
+EOF
 ```
 
 Alternatively, you can compile a specific benchmark:
