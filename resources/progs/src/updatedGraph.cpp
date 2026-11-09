@@ -15,7 +15,7 @@ struct Stats {
     double l1d_acc, l1d_hits, l1d_miss;
     double l2_acc, l2_hits, l2_miss;
     double req_handled, meta_acc, meta_hits, meta_miss;
-    double mem_reads, mem_writes, mem_acc; 
+    double mem_reads, mem_writes, mem_acc;
     double meta_hit_rate, total_accesses;
 
     Stats() : cycles(0), ipc(0), insts(0), l1i_acc(0), l1i_hits(0), l1i_miss(0),
@@ -24,284 +24,245 @@ struct Stats {
 };
 
 vector<string> parse_line(string line) {
-  istringstream ss(line);
-  vector<string> words;
-  string word;
+    istringstream ss(line);
+    vector<string> words;
+    string word;
 
-  while (getline(ss, word, ',')) {
-      words.push_back(word);
-  }
-  return words;
+    while (getline(ss, word, ',')) {
+        words.push_back(word);
+    }
+    return words;
 }
 
 int main(int argc, char** argv)
 {
-  string fname, line;
-  ifstream file;
-  ofstream ofile;
-  vector<string> words;
+    string fname, line;
+    ifstream file;
+    ofstream ofile;
+    vector<string> words;
 
-  // C++98 compliant vector initialization
-  vector<string> order_benchmarks;
-  //order_benchmarks.push_back("Blackscholes");
-  //order_benchmarks.push_back("Fluidanimate");
+    // C++98 compliant vector initialization
+    vector<string> order_benchmarks;
+    order_benchmarks.push_back("Bodytrack"); 
+    order_benchmarks.push_back("Fluidanimate");
+    order_benchmarks.push_back("Canneal");
+    order_benchmarks.push_back("Dedup");
+    order_benchmarks.push_back("Streamcluster");
+    order_benchmarks.push_back("Microbenchmark");
 
-  order_benchmarks.push_back("lbm");
-  order_benchmarks.push_back("sqlite");
-  order_benchmarks.push_back("zstd");
-  order_benchmarks.push_back("cpython");
-  order_benchmarks.push_back("xz");
-  order_benchmarks.push_back("nab");
-  order_benchmarks.push_back("Microbenchmark");
+    // Integrity Tree and Full Security
+    vector<string> order_policies;
+    order_policies.push_back("Integrity Tree");
+    order_policies.push_back("Full Security");
 
-  vector<string> order_policies;
-  order_policies.push_back("No Security");
-  order_policies.push_back("Hashing Only");
-  order_policies.push_back("Encryption Only");
-  order_policies.push_back("Hashing + Encryption");
-  order_policies.push_back("Full Security");
+    // Map to hold Benchmark -> (Policy -> Stats)
+    unordered_map<string, unordered_map<string, Stats> > data;
 
-  // Map to hold Benchmark -> (Policy -> Stats)
-  unordered_map<string, unordered_map<string, Stats> > data;
+    int count;
 
-  int count;
+    if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/IntegrityvsFull.csv\n"); exit(1); }
 
-  if (argc != 2) { fprintf(stderr, "USAGE:\n./processGraph /path/To/stats.csv\n"); exit(1); }
+    fname = argv[1];
+    file.open(fname);
+    if (!file) { fprintf(stderr, "%s failed to open\n", fname.c_str()); exit(1); }
 
-  fname = argv[1];
-  file.open(fname);
-  if (!file) { fprintf(stderr, "%s failed to open\n", fname.c_str()); exit(1); }
+    printf("Processing %s\n\n", fname.c_str());
 
-  printf("Processing %s\n\n", fname.c_str());
-
-  // Process each line
-  while (getline(file, line)) {
-     // C++98 compliant way to strip the invisible carriage return
-     if (!line.empty() && line[line.size() - 1] == '\r') {
-         line.erase(line.size() - 1);
-     }
-
-     if (line.empty()) { continue; }
-
-     words = parse_line(line);
-
-     if (words.size() > 18 && words[0] != "Benchmark" && !words[0].empty()) {
-        string bench = words[0];
-        string policy = words[1];
-
-        // Ensure it's one of the targeted benchmarks
-        if (bench != "Blackscholes" && bench != "Canneal" && bench != "Bodytrack" && 
-            bench != "Fluidanimate" && bench != "Dedup" && bench != "Streamcluster" && bench != "Microbenchmark") {
-            continue;
+    // Process each line
+    while (getline(file, line)) {
+        if (!line.empty() && line[line.size() - 1] == '\r') {
+            line.erase(line.size() - 1);
         }
 
-        Stats s;
-        s.cycles = strtod(words[7].c_str(), NULL);
-        s.ipc = strtod(words[8].c_str(), NULL);
-        s.insts = strtod(words[9].c_str(), NULL);
-        s.l1i_acc = strtod(words[10].c_str(), NULL);
-        s.l1i_hits = strtod(words[11].c_str(), NULL);
-        s.l1i_miss = strtod(words[12].c_str(), NULL);
-        s.l1d_acc = strtod(words[13].c_str(), NULL);
-        s.l1d_hits = strtod(words[14].c_str(), NULL);
-        s.l1d_miss = strtod(words[15].c_str(), NULL);
-        s.l2_acc = strtod(words[16].c_str(), NULL);
-        s.l2_hits = strtod(words[17].c_str(), NULL);
-        s.l2_miss = strtod(words[18].c_str(), NULL);
+        if (line.empty()) { continue; }
 
-        s.req_handled = strtod(words[19].c_str(), NULL);
-        s.meta_acc = strtod(words[20].c_str(), NULL);
-        s.meta_hits = strtod(words[21].c_str(), NULL);
-        s.meta_miss = strtod(words[22].c_str(), NULL);
+        words = parse_line(line);
 
-        // Memory Parsing
-        if (words.size() > 23) s.mem_reads = strtod(words[23].c_str(), NULL);
-        if (words.size() > 24) s.mem_writes = strtod(words[24].c_str(), NULL);
-        if (words.size() > 25) s.mem_acc = strtod(words[25].c_str(), NULL);
+        if (words.size() > 18 && words[0] != "Benchmark" && !words[0].empty()) {
+            string bench = words[0];
+            string policy = words[1];
 
-        s.meta_hit_rate = s.meta_hits / s.meta_acc;
-        s.total_accesses = s.meta_acc + s.mem_acc;
+            // Ensure it's one of the targeted benchmarks from our list
+            if (bench != "Bodytrack" && bench != "Fluidanimate" && bench != "Canneal" &&
+                bench != "Dedup" && bench != "Streamcluster" && bench != "Microbenchmark") {
+                continue;
+            }
 
-        if (s.meta_hit_rate == 1) s.meta_hit_rate = 0;
+            Stats s;
+            s.cycles = strtod(words[7].c_str(), NULL);
+            s.ipc = strtod(words[8].c_str(), NULL);
+            s.insts = strtod(words[9].c_str(), NULL);
+            s.l1i_acc = strtod(words[10].c_str(), NULL);
+            s.l1i_hits = strtod(words[11].c_str(), NULL);
+            s.l1i_miss = strtod(words[12].c_str(), NULL);
+            s.l1d_acc = strtod(words[13].c_str(), NULL);
+            s.l1d_hits = strtod(words[14].c_str(), NULL);
+            s.l1d_miss = strtod(words[15].c_str(), NULL);
+            s.l2_acc = strtod(words[16].c_str(), NULL);
+            s.l2_hits = strtod(words[17].c_str(), NULL);
+            s.l2_miss = strtod(words[18].c_str(), NULL);
 
-        data[bench][policy] = s;
+            s.req_handled = strtod(words[19].c_str(), NULL);
+            s.meta_acc = strtod(words[20].c_str(), NULL);
+            s.meta_hits = strtod(words[21].c_str(), NULL);
+            s.meta_miss = strtod(words[22].c_str(), NULL);
+
+            if (words.size() > 23) s.mem_reads = strtod(words[23].c_str(), NULL);
+            if (words.size() > 24) s.mem_writes = strtod(words[24].c_str(), NULL);
+            if (words.size() > 25) s.mem_acc = strtod(words[25].c_str(), NULL);
+
+            s.meta_hit_rate = s.meta_hits / s.meta_acc;
+            s.total_accesses = s.meta_acc + s.mem_acc;
+
+            if (s.meta_hit_rate == 1) s.meta_hit_rate = 0;
+
+            data[bench][policy] = s;
+        }
     }
-  }
 
-  // =========================================================================
-  // MACRO 1: NORMALIZED GRAPH GENERATOR 
-  // =========================================================================
-  #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR, BASE_POLICY) \
-  do { \
-      /* First pass to find the maximum normalized value for y-axis scaling */ \
-      double max_norm = 0; \
-      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
-          string bench = order_benchmarks[b_idx]; \
-          double base_val = data[bench][BASE_POLICY].STAT_VAR; \
-          for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
-              string policy = order_policies[p_idx]; \
-              double val = data[bench][policy].STAT_VAR; \
-              double normalized_val = (base_val > 0) ? (val / base_val) : 0; \
-              if (normalized_val > max_norm) max_norm = normalized_val; \
-          } \
-      } \
-      if (max_norm == 0) max_norm = 1.0; \
-      double y_max = max_norm * 1.1; /* Add 10% headroom */ \
-      \
-      /* Dynamically scale the x-axis configuration based on number of benchmarks */ \
-      double x_max = order_benchmarks.size() * (order_policies.size() + 1) + .9; \
-      double x_size = order_benchmarks.size() * 1.1; \
-      \
-      ofile.open("jgr/" FILENAME); \
-      if (!ofile.is_open()) { printf("failed to open %s\n", FILENAME); return 1; } \
-      ofile << "newgraph\n\nxaxis size " << x_size << "\n  min 0.1 max " << x_max << " mhash 0 shash 0\n  label : Benchmark\n\n"; \
-      ofile << "  no_auto_hash_labels\n"; \
-      \
-      /* Loop dynamically to output correct tick labels and locations */ \
-      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
-          ofile << "  hash_label at " << (b_idx * (order_policies.size() + 1) + order_benchmarks.size() / 2) << " : " << order_benchmarks[b_idx] << "\n"; \
-      } \
-      ofile << "\n"; \
-      ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
-      ofile << "yaxis min 0 max " << y_max << " size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n  hash .1 mhash 0\n\n"; \
-      ofile << "legend top\n\nnewline pts .1 0 " << x_max << " 0\n\n"; \
-      \
-      count = 1; \
-      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
-          string bench = order_benchmarks[b_idx]; \
-          double base_val = data[bench][BASE_POLICY].STAT_VAR; \
-          for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
-              string policy = order_policies[p_idx]; \
-              double val = data[bench][policy].STAT_VAR; \
-              double normalized_val = (base_val > 0) ? (val / base_val) : 0; \
-              \
-              if (p_idx == 0) { \
-                  ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .6 .025\n"; \
-                  if (count <= 5) ofile << "  label : No Security\n"; \
-              } else if (p_idx == 1) { \
-                  ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .6 .025\n"; \
-                  if (count <= 5) ofile << "  label : Hashing Only\n"; \
-              } else if (p_idx == 2) { \
-                  ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 .025\n"; \
-                  if (count <= 5) ofile << "  label : Encryption Only\n"; \
-              } else if (p_idx == 3) { \
-                  ofile << "newcurve marktype xbar cfill 0 0 .54\n  marksize .6 .025\n"; \
-                  if (count <= 5) ofile << "  label : Hashing + Encryption\n"; \
-              }  else if (p_idx == 4) { \
-                  ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 .025\n"; \
-                  if (count <= 5) ofile << "  label : Full Security\n"; \
-              } \
-              ofile << "  pts\n  " << count << " " << normalized_val << "\n\n"; \
-              count++; \
-          } \
-          /* Add the spacer blank bar */ \
-          ofile << "newcurve marktype xbar cfill 0 1 1\n  marksize .8 .025\n  pts\n  " << count << " 0\n\n"; \
-          count++; \
-      } \
-      ofile.close(); \
-  } while (0)
+    // =========================================================================
+    // NORMALIZED GRAPH GENERATOR
+    // =========================================================================
+    #define GENERATE_GRAPH(FILENAME, YLABEL, STAT_VAR, BASE_POLICY) \
+    do { \
+        double max_norm = 0; \
+        for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+            string bench = order_benchmarks[b_idx]; \
+            double base_val = data[bench][BASE_POLICY].STAT_VAR; \
+            for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
+                string policy = order_policies[p_idx]; \
+                double val = data[bench][policy].STAT_VAR; \
+                double normalized_val = (base_val > 0) ? (val / base_val) : 0; \
+                if (normalized_val > max_norm) max_norm = normalized_val; \
+            } \
+        } \
+        if (max_norm == 0) max_norm = 1.0; \
+        double y_max = max_norm * 1.1; \
+        \
+        double x_max = order_benchmarks.size() * (order_policies.size() + 1); \
+        double x_size = 6.0; \
+        \
+        ofile.open("jgr/" FILENAME); \
+        if (!ofile.is_open()) { printf("failed to open jgr/%s\n", FILENAME); return 1; } \
+        ofile << "newgraph\n\nxaxis size " << x_size << "\n  min 0 max " << x_max << " mhash 0 shash 0\n  label : Benchmark\n\n"; \
+        ofile << "  no_auto_hash_labels\n"; \
+        \
+        for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+            double label_pos = b_idx * (order_policies.size() + 1) + (order_policies.size() + 1.0) / 2.0; \
+            ofile << "  hash_label at " << label_pos << " : " << order_benchmarks[b_idx] << "\n"; \
+        } \
+        ofile << "\n"; \
+        ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
+        ofile << "yaxis min 0 max " << y_max << " size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n  hash .1 mhash 0\n\n"; \
+        ofile << "legend top\n\nnewline pts .1 0 " << x_max << " 0\n\n"; \
+        \
+        count = 1; \
+        for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+            string bench = order_benchmarks[b_idx]; \
+            double base_val = data[bench][BASE_POLICY].STAT_VAR; \
+            for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
+                string policy = order_policies[p_idx]; \
+                double val = data[bench][policy].STAT_VAR; \
+                double normalized_val = (base_val > 0) ? (val / base_val) : 0; \
+                \
+                if (p_idx == 0) { \
+                    ofile << "newcurve marktype xbar cfill 0.85 0.22 0.12\n  marksize .6 .025\n"; \
+                    if (b_idx == 0) ofile << "  label : Integrity Tree\n"; \
+                } else if (p_idx == 1) { \
+                    ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 .025\n"; \
+                    if (b_idx == 0) ofile << "  label : Full Security\n"; \
+                } \
+                ofile << "  pts\n  " << count << " " << normalized_val << "\n\n"; \
+                count++; \
+            } \
+            ofile << "newcurve marktype xbar cfill 0 1 1\n  marksize .8 .025\n  pts\n  " << count << " 0\n\n"; \
+            count++; \
+        } \
+        ofile.close(); \
+    } while (0)
 
+    // =========================================================================
+    // RAW GRAPH GENERATOR
+    // =========================================================================
+    #define GENERATE_RAW_GRAPH(FILENAME, YLABEL, STAT_VAR) \
+    do { \
+        double max_raw = 0; \
+        for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+            string bench = order_benchmarks[b_idx]; \
+            for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
+                string policy = order_policies[p_idx]; \
+                double val = data[bench][policy].STAT_VAR; \
+                if (val > max_raw) max_raw = val; \
+            } \
+        } \
+        if (max_raw == 0) max_raw = 1.0; \
+        double y_max = max_raw * 1.1; \
+        \
+        double x_max = order_benchmarks.size() * (order_policies.size() + 1); \
+        double x_size = 6.0; \
+        \
+        ofile.open("jgr/" FILENAME); \
+        if (!ofile.is_open()) { printf("failed to open jgr/%s\n", FILENAME); return 1; } \
+        ofile << "newgraph\n\nxaxis size " << x_size << "\n  min 0 max " << x_max << " mhash 0 shash 0\n  label : Benchmark\n\n"; \
+        ofile << "  no_auto_hash_labels\n"; \
+        \
+        for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+            double label_pos = b_idx * (order_policies.size() + 1) + (order_policies.size() + 1.0) / 2.0; \
+            ofile << "  hash_label at " << label_pos << " : " << order_benchmarks[b_idx] << "\n"; \
+        } \
+        ofile << "\n"; \
+        ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
+        ofile << "yaxis min 0 max " << y_max << " size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n  mhash 0\n\n"; \
+        ofile << "legend top\n\nnewline pts .1 0 " << x_max << " 0\n\n"; \
+        \
+        count = 1; \
+        for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
+            string bench = order_benchmarks[b_idx]; \
+            for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
+                string policy = order_policies[p_idx]; \
+                double raw_val = data[bench][policy].STAT_VAR; \
+                \
+                if (p_idx == 0) { \
+                    ofile << "newcurve marktype xbar cfill 0.85 0.22 0.12\n  marksize .6 " << y_max / 50 << "\n"; \
+                    if (b_idx == 0) ofile << "  label : Integrity Tree\n"; \
+                } else if (p_idx == 1) { \
+                    ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 " << y_max / 50 << "\n"; \
+                    if (b_idx == 0) ofile << "  label : Full Security\n"; \
+                } \
+                ofile << "  pts\n  " << count << " " << raw_val << "\n\n"; \
+                count++; \
+            } \
+            ofile << "newcurve marktype xbar cfill 0 1 1\n  marksize .8 .025\n  pts\n  " << count << " 0\n\n"; \
+            count++; \
+        } \
+        ofile.close(); \
+    } while (0)
 
-  // =========================================================================
-  // MACRO 2: RAW GRAPH GENERATOR (No Base Policy Normalization, No `hash .1`)
-  // =========================================================================
-  #define GENERATE_RAW_GRAPH(FILENAME, YLABEL, STAT_VAR) \
-  do { \
-      /* First pass to find the maximum RAW value for y-axis scaling */ \
-      double max_raw = 0; \
-      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
-          string bench = order_benchmarks[b_idx]; \
-          for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
-              string policy = order_policies[p_idx]; \
-              double val = data[bench][policy].STAT_VAR; \
-              if (val > max_raw) max_raw = val; \
-          } \
-      } \
-      if (max_raw == 0) max_raw = 1.0; \
-      double y_max = max_raw * 1.1; /* Add 10% headroom */ \
-      \
-      double x_max = order_benchmarks.size() * (order_policies.size() + 1) + .9; \
-      double x_size = order_benchmarks.size() * 1.1; \
-      \
-      ofile.open("jgr/" FILENAME); \
-      if (!ofile.is_open()) { printf("failed to open %s\n", FILENAME); return 1; } \
-      ofile << "newgraph\n\nxaxis size " << x_size << "\n  min 0.1 max " << x_max << " mhash 0 shash 0\n  label : Benchmark\n\n"; \
-      ofile << "  no_auto_hash_labels\n"; \
-      \
-      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
-          ofile << "  hash_label at " << (b_idx * (order_policies.size() + 1) + order_benchmarks.size() / 2) << " : " << order_benchmarks[b_idx] << "\n"; \
-      } \
-      ofile << "\n"; \
-      ofile << "  hash_labels fontsize 12 font Times-Italic hjl vjc rotate -60\n\n"; \
-      /* NOTE: `hash .1` is intentionally removed here so Jgraph auto-calculates tick spacing for large raw values */ \
-      ofile << "yaxis min 0 max " << y_max << " size 5\n  label : " YLABEL "\n  grid_lines grid_gray .7\n  mhash 0\n\n"; \
-      ofile << "legend top\n\nnewline pts .1 0 " << x_max << " 0\n\n"; \
-      \
-      count = 1; \
-      for (size_t b_idx = 0; b_idx < order_benchmarks.size(); ++b_idx) { \
-          string bench = order_benchmarks[b_idx]; \
-          for (size_t p_idx = 0; p_idx < order_policies.size(); ++p_idx) { \
-              string policy = order_policies[p_idx]; \
-              double raw_val = data[bench][policy].STAT_VAR; \
-              \
-              if (p_idx == 0) { \
-                  ofile << "newcurve marktype xbar cfill 0 1 0\n  marksize .6 " << y_max / 50 << "\n"; \
-                  if (count <= 5) ofile << "  label : No Security\n"; \
-              } else if (p_idx == 1) { \
-                  ofile << "newcurve marktype xbar cfill 1 1 0\n  marksize .6 " << y_max / 50 << "\n"; \
-                  if (count <= 5) ofile << "  label : Hashing Only\n"; \
-              } else if (p_idx == 2) { \
-                  ofile << "newcurve marktype xbar cfill 1 0 0\n  marksize .6 " << y_max / 50 << "\n"; \
-                  if (count <= 5) ofile << "  label : Encryption Only\n"; \
-              } else if (p_idx == 3) { \
-                  ofile << "newcurve marktype xbar cfill 0 0 .54\n  marksize .6 " << y_max / 50 << "\n"; \
-                  if (count <= 5) ofile << "  label : Hashing + Encryption\n"; \
-              }  else if (p_idx == 4) { \
-                  ofile << "newcurve marktype xbar cfill 0 0 0\n  marksize .6 " << y_max / 50 << "\n"; \
-                  if (count <= 5) ofile << "  label : Full Security\n"; \
-              } \
-              ofile << "  pts\n  " << count << " " << raw_val << "\n\n"; \
-              count++; \
-          } \
-          /* Add the spacer blank bar */ \
-          ofile << "newcurve marktype xbar cfill 0 1 1\n  marksize .8 .025\n  pts\n  " << count << " 0\n\n"; \
-          count++; \
-      } \
-      ofile.close(); \
-  } while (0)
+    // ============= Generate All Graphs ============== //
 
+    GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles, "Integrity Tree");
+    GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc, "Integrity Tree");
+    GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits, "Integrity Tree");
+    GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss, "Integrity Tree");
+    GENERATE_GRAPH("l1d-acc.jgr", "L1 D-Cache Accesses (Normalized)", l1d_acc, "Integrity Tree");
+    GENERATE_GRAPH("l1d-hits.jgr", "L1 D-Cache Hits (Normalized)", l1d_hits, "Integrity Tree");
+    GENERATE_GRAPH("l1d-miss.jgr", "L1 D-Cache Misses (Normalized)", l1d_miss, "Integrity Tree");
+    GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc, "Integrity Tree");
+    GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits, "Integrity Tree");
+    GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss, "Integrity Tree");
 
-  // ============= Generate All Graphs ============== //
-  
-  // Cycles, ipc & instructions (NORMALIZED)
-  GENERATE_GRAPH("numCycles.jgr", "numCycles (Normalized)", cycles, "No Security");
+    GENERATE_RAW_GRAPH("meta-acc.jgr", "Metadata Accesses (Raw)", meta_acc);
+    GENERATE_RAW_GRAPH("meta-hits.jgr", "Metadata Hits (Raw)", meta_hits);
+    GENERATE_RAW_GRAPH("meta-miss.jgr", "Metadata Misses (Raw)", meta_miss);
+    GENERATE_RAW_GRAPH("meta-hit-rate.jgr", "Metadata Hit Rate (Raw)", meta_hit_rate);
 
-  // On-chip caches (NORMALIZED)
-  GENERATE_GRAPH("l1i-acc.jgr", "L1 I-Cache Accesses (Normalized)", l1i_acc, "No Security");
-  GENERATE_GRAPH("l1i-hits.jgr", "L1 I-Cache Hits (Normalized)", l1i_hits, "No Security");
-  GENERATE_GRAPH("l1i-miss.jgr", "L1 I-Cache Misses (Normalized)", l1i_miss, "No Security");
-  GENERATE_GRAPH("l1d-acc.jgr", "L1 D-Cache Accesses (Normalized)", l1d_acc, "No Security");
-  GENERATE_GRAPH("l1d-hits.jgr", "L1 D-Cache Hits (Normalized)", l1d_hits, "No Security");
-  GENERATE_GRAPH("l1d-miss.jgr", "L1 D-Cache Misses (Normalized)", l1d_miss, "No Security");
-  GENERATE_GRAPH("l2-acc.jgr", "L2 Cache Accesses (Normalized)", l2_acc, "No Security");
-  GENERATE_GRAPH("l2-hits.jgr", "L2 Cache Hits (Normalized)", l2_hits, "No Security");
-  GENERATE_GRAPH("l2-miss.jgr", "L2 Cache Misses (Normalized)", l2_miss, "No Security");
+    GENERATE_RAW_GRAPH("mem-reads.jgr", "Memory Reads (Raw)", mem_reads);
+    GENERATE_RAW_GRAPH("mem-writes.jgr", "Memory Writes (Raw)", mem_writes);
+    GENERATE_RAW_GRAPH("mem-acc.jgr", "Memory Accesses (Raw)", mem_acc);
+    GENERATE_RAW_GRAPH("total-acc.jgr", "Total Number of Accesses (Metadata + Memory - Raw)", total_accesses);
 
-  // Metadata requests (RAW)
-  GENERATE_RAW_GRAPH("meta-acc.jgr", "Metadata Accesses (Raw)", meta_acc);
-  GENERATE_RAW_GRAPH("meta-hits.jgr", "Metadata Hits (Raw)", meta_hits);
-  GENERATE_RAW_GRAPH("meta-miss.jgr", "Metadata Misses (Raw)", meta_miss);
-  GENERATE_RAW_GRAPH("meta-hit-rate.jgr", "Metadata Hit Rate (Raw)", meta_hit_rate);
+    GENERATE_RAW_GRAPH("ipc.jgr", "IPC (Raw)", ipc);
+    GENERATE_RAW_GRAPH("insts.jgr", "Commit Instructions (Raw)", insts);
 
-  // Memory stats (RAW)
-  GENERATE_RAW_GRAPH("mem-reads.jgr", "Memory Reads (Raw)", mem_reads);
-  GENERATE_RAW_GRAPH("mem-writes.jgr", "Memory Writes (Raw)", mem_writes);
-  GENERATE_RAW_GRAPH("mem-acc.jgr", "Memory Accesses (Raw)", mem_acc);
-  GENERATE_RAW_GRAPH("total-acc.jgr", "Total Number of Accesses (Metadata + Memory - Raw)", total_accesses);
-
-  // Instructions (RAW)
-  GENERATE_RAW_GRAPH("ipc.jgr", "IPC (Raw)", ipc);
-  GENERATE_RAW_GRAPH("insts.jgr", "Commit Instructions (Raw)", insts);
-
-  return 0;
+    return 0;
 }
